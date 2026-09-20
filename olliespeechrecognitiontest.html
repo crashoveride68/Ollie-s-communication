@@ -1,0 +1,148 @@
+<!doctype html>
+<html lang="en-AU">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Ollie Speech Recognition Test</title>
+<style>
+body{font-family:Arial,sans-serif;text-align:center;background:#f4f7fb;padding:20px}
+h1{font-size:32px}.card{max-width:700px;margin:20px auto;background:white;padding:24px;border-radius:20px;box-shadow:0 4px 15px #0002}
+button{font-size:28px;padding:18px 28px;border:0;border-radius:16px;background:#3478f6;color:white}
+#status{font-size:22px;margin:22px 0;line-height:1.5}
+#result{font-size:40px;font-weight:bold;min-height:55px}
+.small{font-size:17px;color:#666;text-align:left;word-break:break-word}
+</style>
+</head>
+<body>
+<h1>🎤 Ollie Speech Test</h1>
+<div class="card">
+<p>Tap the button, then say <b>Can</b>.</p>
+<button id="start">🎤 Speak</button>
+<div id="status">Checking speech recognition...</div>
+<div id="result"></div>
+<div id="details" class="small"></div>
+</div>
+
+<script>
+const statusEl=document.getElementById("status");
+const resultEl=document.getElementById("result");
+const details=document.getElementById("details");
+const button=document.getElementById("start");
+
+const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+
+async function setup(){
+ if(!SR){
+   statusEl.textContent="❌ SpeechRecognition is not available in this browser.";
+   button.disabled=true;
+   return;
+ }
+ statusEl.textContent="SpeechRecognition is available.";
+
+ let localStatus="Not tested";
+ try{
+   if(typeof SR.available==="function"){
+     localStatus=await SR.available({
+       langs:["en-AU"],
+       processLocally:true,
+       quality:"command"
+     });
+   }else{
+     localStatus="This browser does not expose on-device availability checks.";
+   }
+ }catch(e){
+   localStatus="Availability check error: "+e.name+" - "+e.message;
+ }
+
+ details.textContent=
+   "Browser: "+navigator.userAgent+
+   " | On-device en-AU: "+localStatus;
+
+ if(localStatus==="downloadable" || localStatus==="downloading"){
+   statusEl.textContent="⬇️ The Australian English speech pack needs to be downloaded.";
+   if(typeof SR.install==="function"){
+     try{
+       const ok=await SR.install({langs:["en-AU"]});
+       statusEl.textContent=ok
+         ?"✅ Australian English speech pack installed. Tap Speak."
+         :"❌ Speech pack installation failed.";
+     }catch(e){
+       statusEl.textContent="❌ Installation error: "+e.name;
+     }
+   }
+ }
+}
+
+button.onclick=async()=>{
+ resultEl.textContent="";
+ statusEl.textContent="🎤 Listening... Say Can";
+ button.disabled=true;
+
+ const recognition=new SR();
+ recognition.lang="en-AU";
+ recognition.continuous=false;
+ recognition.interimResults=true;
+ recognition.maxAlternatives=5;
+
+ if("processLocally" in recognition){
+   try{
+     const available=typeof SR.available==="function"
+       ?await SR.available({langs:["en-AU"],processLocally:true,quality:"command"})
+       :null;
+
+     if(available==="available"){
+       recognition.processLocally=true;
+       statusEl.textContent="🎤 Listening on device... Say Can";
+     }else if(available==="downloadable"){
+       statusEl.textContent="⬇️ Downloading speech pack...";
+       const ok=await SR.install({langs:["en-AU"]});
+       if(ok){
+         recognition.processLocally=true;
+         statusEl.textContent="🎤 Listening on device... Say Can";
+       }else{
+         throw new Error("Speech pack could not be installed");
+       }
+     }else if(available==="downloading"){
+       statusEl.textContent="⬇️ Speech pack is downloading. Try again shortly.";
+       button.disabled=false;
+       return;
+     }else{
+       statusEl.textContent="🌐 On-device en-AU unavailable. Trying normal recognition...";
+     }
+   }catch(e){
+     details.textContent+=" | Local setup: "+e.name+" - "+e.message;
+     statusEl.textContent="🌐 Local setup unavailable. Trying normal recognition...";
+   }
+ }
+
+ recognition.onresult=e=>{
+   const text=e.results[e.results.length-1][0].transcript;
+   resultEl.textContent=text;
+   if(e.results[e.results.length-1].isFinal)
+     statusEl.textContent="✅ Recognition worked!";
+ };
+
+ recognition.onerror=e=>{
+   statusEl.textContent="❌ Recognition error: "+e.error;
+   details.textContent+=" | Error: "+e.error;
+   button.disabled=false;
+ };
+
+ recognition.onend=()=>{
+   button.disabled=false;
+   if(statusEl.textContent.includes("Listening"))
+     statusEl.textContent="Recognition ended without a final result.";
+ };
+
+ try{
+   recognition.start();
+ }catch(e){
+   statusEl.textContent="❌ Could not start: "+e.name;
+   button.disabled=false;
+ }
+};
+
+setup();
+</script>
+</body>
+</html>
