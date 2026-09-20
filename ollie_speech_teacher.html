@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Ollie's Talking Practice</title>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: Arial, sans-serif;
+    background: #f5f7fb;
+    color: #202124;
+    text-align: center;
+    padding: 18px;
+  }
+  h1 {
+    font-size: clamp(28px, 7vw, 48px);
+    margin: 10px 0 8px;
+  }
+  .instruction {
+    font-size: clamp(18px, 4.5vw, 26px);
+    margin: 0 auto 22px;
+  }
+  #words {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 14px;
+    max-width: 850px;
+    margin: 0 auto 25px;
+  }
+  .word {
+    border: 0;
+    border-radius: 20px;
+    background: white;
+    box-shadow: 0 4px 12px #00000018;
+    padding: 22px 26px;
+    font-size: clamp(28px, 7vw, 46px);
+    font-weight: 700;
+    min-width: 120px;
+    touch-action: manipulation;
+  }
+  .word.active {
+    outline: 5px solid #4f8cff;
+    background: #eaf2ff;
+  }
+  .word.correct {
+    background: #b9f3c5;
+    outline: 4px solid #39a955;
+  }
+  .word.correct::after { content: " ✓"; }
+  .mic {
+    width: 110px;
+    height: 110px;
+    border-radius: 50%;
+    border: 0;
+    background: #3478f6;
+    color: white;
+    font-size: 48px;
+    box-shadow: 0 5px 15px #00000025;
+    touch-action: manipulation;
+  }
+  .mic.listening {
+    background: #e53935;
+    animation: pulse 1s infinite;
+  }
+  @keyframes pulse {
+    50% { transform: scale(1.08); }
+  }
+  #message {
+    min-height: 42px;
+    margin: 18px auto;
+    font-size: clamp(20px, 5vw, 30px);
+    font-weight: 700;
+  }
+  #heard {
+    min-height: 34px;
+    font-size: 20px;
+    color: #666;
+  }
+  .reset {
+    margin-top: 18px;
+    border: 0;
+    border-radius: 14px;
+    padding: 13px 22px;
+    font-size: 20px;
+    background: #ddd;
+  }
+</style>
+</head>
+<body>
+
+<h1>Let's practise talking 😊</h1>
+<p class="instruction">Tap a word. I'll say it, then you say it.</p>
+
+<div id="words">
+  <button class="word" data-word="Can">Can</button>
+  <button class="word" data-word="I">I</button>
+  <button class="word" data-word="have">have</button>
+  <button class="word" data-word="a">a</button>
+  <button class="word" data-word="shower">shower</button>
+  <button class="word" data-word="please">please</button>
+  <button class="word" data-word="Daddy">Daddy</button>
+</div>
+
+<button id="mic" class="mic" aria-label="Tap to speak">🎤</button>
+
+<div id="message">Tap a word to begin.</div>
+<div id="heard"></div>
+
+<button id="reset" class="reset">Reset</button>
+
+<script>
+const wordButtons = [...document.querySelectorAll(".word")];
+const mic = document.getElementById("mic");
+const message = document.getElementById("message");
+const heard = document.getElementById("heard");
+const reset = document.getElementById("reset");
+
+let selected = null;
+let recognition = null;
+let listening = false;
+
+const SpeechRecognition =
+  window.SpeechRecognition || window.webkitSpeechRecognition;
+
+function speak(word) {
+  if (!("speechSynthesis" in window)) return;
+
+  speechSynthesis.cancel();
+
+  const utterance = new SpeechSynthesisUtterance(word);
+  utterance.lang = "en-AU";
+  utterance.rate = 0.75;
+  utterance.pitch = 1.05;
+
+  const voices = speechSynthesis.getVoices();
+  const australian = voices.find(v => v.lang.toLowerCase().startsWith("en-au"));
+  if (australian) utterance.voice = australian;
+
+  speechSynthesis.speak(utterance);
+}
+
+function clean(text) {
+  return text.toLowerCase()
+    .replace(/[^a-z\s]/g, "")
+    .trim();
+}
+
+function distance(a, b) {
+  const dp = Array.from({length: a.length + 1}, () =>
+    Array(b.length + 1).fill(0)
+  );
+
+  for (let i = 0; i <= a.length; i++) dp[i][0] = i;
+  for (let j = 0; j <= b.length; j++) dp[0][j] = j;
+
+  for (let i = 1; i <= a.length; i++) {
+    for (let j = 1; j <= b.length; j++) {
+      dp[i][j] = a[i-1] === b[j-1]
+        ? dp[i-1][j-1]
+        : Math.min(
+            dp[i-1][j] + 1,
+            dp[i][j-1] + 1,
+            dp[i-1][j-1] + 1
+          );
+    }
+  }
+  return dp[a.length][b.length];
+}
+
+function isCloseEnough(spoken, target) {
+  spoken = clean(spoken);
+  target = clean(target);
+
+  if (!spoken) return false;
+  if (spoken === target) return true;
+  if (spoken.includes(target) || target.includes(spoken)) return true;
+
+  const d = distance(spoken, target);
+
+  if (target.length <= 2) return d <= 1;
+  if (target.length <= 4) return d <= 2;
+  return d <= 3;
+}
+
+function setupRecognition() {
+  if (!SpeechRecognition) {
+    message.textContent =
+      "Speech recognition isn't supported here. Please use Chrome.";
+    mic.disabled = true;
+    return false;
+  }
+
+  recognition = new SpeechRecognition();
+  recognition.lang = "en-AU";
+  recognition.continuous = false;
+  recognition.interimResults = true;
+  recognition.maxAlternatives = 5;
+
+  recognition.onstart = () => {
+    listening = true;
+    mic.classList.add("listening");
+    mic.textContent = "⏹️";
+    message.textContent = "Your turn...";
+  };
+
+  recognition.onresult = event => {
+    let bestText = "";
+
+    for (let i = event.results.length - 1; i >= 0; i--) {
+      if (event.results[i][0]) {
+        bestText = event.results[i][0].transcript;
+        break;
+      }
+    }
+
+    if (bestText) heard.textContent = "I heard: " + bestText;
+
+    if (!selected || !event.results[event.results.length - 1].isFinal)
+      return;
+
+    const target = selected.dataset.word;
+    let matched = false;
+
+    for (let i = 0; i < event.results.length; i++) {
+      if (isCloseEnough(event.results[i][0].transcript, target)) {
+        matched = true;
+        break;
+      }
+    }
+
+    if (matched) {
+      selected.classList.remove("active");
+      selected.classList.add("correct");
+      selected.disabled = true;
+      message.textContent = "Great job! ✓";
+
+      const next = wordButtons.find(b => !b.disabled);
+
+      if (next) {
+        selected = next;
+        setTimeout(() => {
+          next.classList.add("active");
+          speak(next.dataset.word);
+          message.textContent = "Now say: " + next.dataset.word;
+        }, 700);
+      } else {
+        selected = null;
+        setTimeout(() => {
+          message.textContent =
+            "You did it! Can I have a shower please Daddy? 🎉";
+        }, 700);
+      }
+    } else {
+      message.textContent = "Good try. Have another go.";
+      if (selected) speak(selected.dataset.word);
+    }
+  };
+
+  recognition.onerror = event => {
+    listening = false;
+    mic.classList.remove("listening");
+    mic.textContent = "🎤";
+
+    if (event.error === "not-allowed") {
+      message.textContent = "Please allow microphone access.";
+    } else if (event.error !== "no-speech") {
+      message.textContent = "Let's try again.";
+    }
+  };
+
+  recognition.onend = () => {
+    listening = false;
+    mic.classList.remove("listening");
+    mic.textContent = "🎤";
+  };
+
+  return true;
+}
+
+wordButtons.forEach(button => {
+  button.addEventListener("click", () => {
+    if (button.disabled) return;
+
+    if (selected) selected.classList.remove("active");
+    selected = button;
+    selected.classList.add("active");
+
+    heard.textContent = "";
+    speak(button.dataset.word);
+    message.textContent = "Now say: " + button.dataset.word;
+  });
+});
+
+mic.addEventListener("click", () => {
+  if (!selected) {
+    message.textContent = "Tap a word first.";
+    return;
+  }
+
+  if (listening) {
+    recognition.stop();
+    return;
+  }
+
+  heard.textContent = "";
+  try {
+    recognition.start();
+  } catch (e) {}
+});
+
+reset.addEventListener("click", () => {
+  if (recognition && listening) {
+    try { recognition.stop(); } catch(e) {}
+  }
+
+  speechSynthesis.cancel();
+  selected = null;
+  heard.textContent = "";
+  message.textContent = "Tap a word to begin.";
+
+  wordButtons.forEach(button => {
+    button.disabled = false;
+    button.classList.remove("active", "correct");
+  });
+});
+
+setupRecognition();
+
+if ("speechSynthesis" in window) {
+  speechSynthesis.onvoiceschanged = () => {};
+}
+</script>
+
+</body>
+</html>
