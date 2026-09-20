@@ -8,33 +8,33 @@
 *{box-sizing:border-box}
 body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;background:linear-gradient(180deg,#e7f7ff,#fff);font-family:Arial,sans-serif}
 .card{width:min(94vw,820px);padding:30px 20px 36px;text-align:center;background:#fff;border-radius:30px;box-shadow:0 10px 30px rgba(0,0,0,.12)}
-h1{font-size:clamp(26px,6vw,42px);color:#174b70;margin:0 0 20px}
-.mic{width:110px;height:110px;border-radius:55px;border:0;background:#e9f3f8;font-size:50px;cursor:pointer}
+h1{font-size:clamp(25px,6vw,42px);color:#174b70;margin:0 0 22px}
+.mic{width:110px;height:110px;border-radius:55px;border:0;background:#e9f3f8;font-size:50px;cursor:pointer;touch-action:manipulation}
 .mic.listening{background:#ffdede;box-shadow:0 0 0 8px #ffecec}
 .status{min-height:32px;margin:18px 0;color:#66808f;font-size:20px}
 .words{display:flex;flex-wrap:wrap;justify-content:center;gap:10px;margin:22px 0}
-.word{padding:13px 15px;border-radius:16px;background:#eef3f6;color:#6a7880;font-size:clamp(25px,5.5vw,43px);font-weight:700}
-.word.recognised{background:#dff5df;color:#236b2b}
-.word.current{background:#cceeff;color:#174b70;outline:4px solid #75c9ee}
-.transcript{display:none}
+.word{border:0;padding:15px 17px;border-radius:16px;background:#eef3f6;color:#6a7880;font-size:clamp(25px,5.5vw,43px);font-weight:700;cursor:pointer;touch-action:manipulation}
+.word.active{background:#cceeff;color:#174b70;outline:4px solid #75c9ee}
+.word.recognised{background:#dff5df;color:#236b2b;cursor:default}
+.word:disabled{opacity:1}
 .reset{margin-top:18px;border:0;border-radius:14px;padding:12px 20px;font-size:18px;background:#eee;color:#444}
-.note{font-size:15px;color:#7b8b93;margin-top:18px}
 </style>
 </head>
 <body>
 <main class="card">
 <h1>Can Ollie have a shower please Daddy?</h1>
-<button id="mic" class="mic" type="button" aria-label="Start or stop listening">🎤</button>
-<div id="status" class="status">Tap the microphone and start talking.</div>
 
-<div id="words" class="words">
-<span class="word" data-word="can">Can</span>
-<span class="word" data-word="ollie">Ollie</span>
-<span class="word" data-word="have">have</span>
-<span class="word" data-word="a">a</span>
-<span class="word" data-word="shower">shower</span>
-<span class="word" data-word="please">please</span>
-<span class="word" data-word="daddy">Daddy</span>
+<button id="mic" class="mic" type="button" aria-label="Start recognition for the selected word">🎤</button>
+<div id="status" class="status">Tap a word to practise it.</div>
+
+<div class="words" aria-label="Words to practise">
+<button class="word" type="button" data-word="can">Can</button>
+<button class="word" type="button" data-word="ollie">Ollie</button>
+<button class="word" type="button" data-word="have">have</button>
+<button class="word" type="button" data-word="a">a</button>
+<button class="word" type="button" data-word="shower">shower</button>
+<button class="word" type="button" data-word="please">please</button>
+<button class="word" type="button" data-word="daddy">Daddy</button>
 </div>
 
 <button id="reset" class="reset" type="button">Reset</button>
@@ -45,123 +45,121 @@ h1{font-size:clamp(26px,6vw,42px);color:#174b70;margin:0 0 20px}
 const mic=document.getElementById("mic");
 const status=document.getElementById("status");
 const reset=document.getElementById("reset");
-const wordEls=[...document.querySelectorAll(".word")];
-const target=wordEls.map(x=>x.dataset.word);
-const SpeechRecognition=window.SpeechRecognition||window.webkitSpeechRecognition;
+const buttons=[...document.querySelectorAll(".word")];
+const Recognition=window.SpeechRecognition||window.webkitSpeechRecognition;
 
 let recognition=null;
+let selected=null;
 let listening=false;
-let finalText="";
-let heardWords=new Set();
 
-function normalise(text){
- return text.toLowerCase()
-   .replace(/[^a-z0-9\s]/g," ")
-   .replace(/\s+/g," ")
-   .trim();
+function stopListening(){
+  if(recognition && listening){
+    listening=false;
+    try{recognition.stop();}catch(e){}
+  }
+  mic.classList.remove("listening");
+  mic.textContent="🎤";
 }
 
-function updateWords(text){
- const spoken=normalise(text).split(" ").filter(Boolean);
- let cursor=0;
+function startFor(button){
+  if(button.disabled || !Recognition) return;
 
- wordEls.forEach((el,i)=>{
-   const wanted=target[i];
-   let found=-1;
-   for(let j=cursor;j<spoken.length;j++){
-     if(spoken[j]===wanted){found=j;break;}
-   }
+  selected=button;
+  buttons.forEach(b=>b.classList.remove("active"));
+  button.classList.add("active");
 
-   el.classList.remove("recognised","current");
+  if(recognition) stopListening();
 
-   if(found>=0){
-     el.classList.add("recognised");
-     heardWords.add(i);
-     cursor=found+1;
-   }
- });
+  recognition=new Recognition();
+  recognition.lang="en-AU";
+  recognition.continuous=false;
+  recognition.interimResults=true;
+  recognition.maxAlternatives=3;
 
- const next=wordEls.findIndex((_,i)=>!heardWords.has(i));
- if(next>=0) wordEls[next].classList.add("current");
+  recognition.onstart=()=>{
+    listening=true;
+    mic.classList.add("listening");
+    mic.textContent="⏹️";
+    status.textContent='Say "'+button.textContent.trim()+'".';
+  };
 
- if(heardWords.size===wordEls.length){
-   status.textContent="All the words recognised! 🎉";
- } else {
-   status.textContent=heardWords.size+" of "+wordEls.length+" words recognised";
- }
+  recognition.onresult=(event)=>{
+    let heard="";
+    for(let i=0;i<event.results.length;i++){
+      for(let j=0;j<event.results[i].length;j++){
+        heard+=" "+event.results[i][j].transcript;
+      }
+    }
+
+    const target=button.dataset.word;
+    const spoken=heard.toLowerCase().replace(/[^a-z0-9\s]/g," ");
+    const words=spoken.split(/\s+/).filter(Boolean);
+
+    if(words.includes(target)){
+      stopListening();
+      button.disabled=true;
+      button.classList.remove("active");
+      button.classList.add("recognised");
+      button.textContent="✓ "+button.textContent.trim();
+
+      const remaining=buttons.filter(b=>!b.disabled).length;
+      status.textContent=remaining
+        ? "Great! Tap the next word."
+        : "All words recognised! 🎉";
+    }
+  };
+
+  recognition.onerror=(event)=>{
+    stopListening();
+    if(event.error==="not-allowed"||event.error==="service-not-allowed"){
+      status.textContent="Microphone access was blocked. Allow microphone access for this website.";
+    }else if(event.error==="no-speech"){
+      status.textContent='No speech detected. Tap the word again and try.';
+    }else{
+      status.textContent="Try again.";
+    }
+  };
+
+  recognition.onend=()=>{
+    if(listening){
+      listening=false;
+      mic.classList.remove("listening");
+      mic.textContent="🎤";
+      if(selected && !selected.disabled){
+        status.textContent='Tap "'+selected.textContent.trim()+'" and try again.';
+      }
+    }
+  };
+
+  try{recognition.start();}
+  catch(e){status.textContent="Please try again.";}
 }
 
-function setup(){
- if(!SpeechRecognition){
-   status.textContent="Live speech recognition isn't supported by this browser. Try Chrome on the Lenovo tablet.";
-   mic.disabled=true;
-   return;
- }
+if(!Recognition){
+  mic.disabled=true;
+  status.textContent="Live speech recognition isn't supported by this browser. Try Chrome on the Lenovo tablet.";
+}else{
+  buttons.forEach(button=>{
+    button.addEventListener("click",()=>startFor(button));
+  });
 
- recognition=new SpeechRecognition();
- recognition.lang="en-AU";
- recognition.continuous=true;
- recognition.interimResults=true;
- recognition.maxAlternatives=3;
-
- recognition.onstart=()=>{
-   listening=true;
-   mic.classList.add("listening");
-   mic.textContent="⏹️";
-   status.textContent="Listening... speak naturally.";
- };
-
- recognition.onresult=(event)=>{
-   let interim="";
-   let completed="";
-   for(let i=0;i<event.results.length;i++){
-     const text=event.results[i][0].transcript;
-     if(event.results[i].isFinal) completed+=" "+text;
-     else interim+=" "+text;
-   }
-   if(completed.trim()) finalText+=" "+completed;
-   const display=(finalText+" "+interim).trim();
-   
-   updateWords(display);
- };
-
- recognition.onerror=(event)=>{
-   if(event.error==="not-allowed"||event.error==="service-not-allowed"){
-     status.textContent="Microphone access was blocked. Allow microphone access for this website in Chrome.";
-   } else {
-     status.textContent="Speech recognition error: "+event.error;
-   }
- };
-
- recognition.onend=()=>{
-   if(listening){
-     try{recognition.start();}catch(e){}
-   }
- };
-
- mic.addEventListener("click",()=>{
-   if(listening){
-     listening=false;
-     recognition.stop();
-     mic.classList.remove("listening");
-     mic.textContent="🎤";
-     status.textContent="Stopped listening.";
-   }else{
-     try{recognition.start();}catch(e){}
-   }
- });
-
- reset.addEventListener("click",()=>{
-   finalText="";
-   heardWords.clear();
-      wordEls.forEach(x=>x.classList.remove("recognised","current"));
-   status.textContent=listening?"Listening... speak naturally.":"Tap the microphone and start talking.";
- });
-
- wordEls[0].classList.add("current");
+  mic.addEventListener("click",()=>{
+    if(listening) stopListening();
+    else if(selected && !selected.disabled) startFor(selected);
+    else status.textContent="Tap a word first.";
+  });
 }
 
-setup();
+reset.addEventListener("click",()=>{
+  stopListening();
+  selected=null;
+  buttons.forEach(button=>{
+    button.disabled=false;
+    button.classList.remove("active","recognised");
+    button.textContent=button.dataset.word.charAt(0).toUpperCase()+button.dataset.word.slice(1);
+  });
+  status.textContent="Tap a word to practise it.";
+});
 })();
 </script>
 </body>
