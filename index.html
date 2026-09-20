@@ -140,13 +140,23 @@ if(!Recognition){
   status.textContent="Live speech recognition isn't supported by this browser. Try Chrome on the Lenovo tablet.";
 }else{
   buttons.forEach(button=>{
-    button.addEventListener("click",()=>startFor(button));
+    button.addEventListener("click",()=>{
+      if(button.disabled || listening) return;
+      selected=button;
+      buttons.forEach(b=>b.classList.remove("active"));
+      button.classList.add("active");
+      status.textContent='Ready to record "'+button.textContent.trim()+'". Tap the microphone.';
+    });
   });
 
   mic.addEventListener("click",()=>{
-    if(listening) stopListening();
-    else if(selected && !selected.disabled) startFor(selected);
-    else status.textContent="Tap a word first.";
+    if(listening){
+      stopListening();
+    }else if(selected && !selected.disabled){
+      startFor(selected);
+    }else{
+      status.textContent="Tap a word first, then tap the microphone.";
+    }
   });
 }
 
