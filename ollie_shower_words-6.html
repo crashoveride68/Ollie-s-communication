@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ollie's Shower Words</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;background:linear-gradient(180deg,#e7f7ff,#fff);font-family:Arial,sans-serif;-webkit-tap-highlight-color:transparent}
+.card{width:min(94vw,760px);padding:34px 20px 40px;text-align:center;background:#fff;border-radius:30px;box-shadow:0 10px 30px rgba(0,0,0,.12)}
+.shower{font-size:68px;margin-bottom:18px}
+.words{display:flex;flex-wrap:wrap;justify-content:center;gap:14px}
+.word{border:0;border-radius:20px;background:#e9f3f8;color:#174b70;font-size:clamp(30px,7vw,58px);font-weight:700;padding:18px 20px;min-width:44px;min-height:78px;cursor:pointer;touch-action:manipulation}
+.word:active{transform:scale(.97)}
+.word.recording{background:#ffe1e1;color:#9b2226}
+.word.recorded{background:#dff5df;color:#236b2b;cursor:default}
+.status{min-height:30px;margin:22px 0 0;color:#66808f;font-size:19px}
+.reset{margin-top:15px;border:0;border-radius:14px;padding:12px 20px;font-size:18px;background:#eee;color:#444}
+</style>
+</head>
+<body>
+<main class="card">
+<div class="shower" aria-hidden="true">🚿</div>
+<div class="words" aria-label="Tap each word once to record Ollie's voice">
+<button class="word" type="button" data-word="Can">Can</button>
+<button class="word" type="button" data-word="Ollie">Ollie</button>
+<button class="word" type="button" data-word="have">have</button>
+<button class="word" type="button" data-word="a">a</button>
+<button class="word" type="button" data-word="shower">shower</button>
+<button class="word" type="button" data-word="please">please</button>
+<button class="word" type="button" data-word="Daddy">Daddy</button>
+</div>
+<p class="status" id="status">Tap a word once and Ollie can say that word.</p>
+<button class="reset" id="reset" type="button">Reset recordings</button>
+</main>
+
+<script>
+(function(){
+const buttons=[...document.querySelectorAll(".word")];
+const status=document.getElementById("status");
+const reset=document.getElementById("reset");
+let stream=null;
+let activeRecorder=null;
+let activeButton=null;
+const recordings={};
+
+async function getMic(){
+  if(!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia){
+    throw new Error("Microphone recording is not supported here.");
+  }
+  if(!stream) stream=await navigator.mediaDevices.getUserMedia({audio:true});
+  return stream;
+}
+
+async function recordWord(button){
+  if(button.disabled || activeRecorder) return;
+
+  try{
+    const mic=await getMic();
+    const chunks=[];
+    const recorder=new MediaRecorder(mic);
+    activeRecorder=recorder;
+    activeButton=button;
+
+    button.classList.add("recording");
+    status.textContent='Recording "'+button.dataset.word+'"...';
+
+    recorder.ondataavailable=e=>{if(e.data.size) chunks.push(e.data)};
+    recorder.onstop=()=>{
+      const blob=new Blob(chunks,{type:recorder.mimeType||"audio/webm"});
+      recordings[button.dataset.word]=blob;
+      button.disabled=true;
+      button.classList.remove("recording");
+      button.classList.add("recorded");
+      button.textContent="✓ "+button.dataset.word;
+      activeRecorder=null;
+      activeButton=null;
+
+      const remaining=buttons.filter(b=>!b.disabled).length;
+      status.textContent=remaining
+        ? "Recorded. Tap the next word once."
+        : "All words recorded! 🎉";
+    };
+
+    recorder.start();
+
+    // One tap only: automatically stop after 2.5 seconds.
+    setTimeout(()=>{
+      if(recorder.state==="recording") recorder.stop();
+    },2500);
+
+  }catch(err){
+    activeRecorder=null;
+    activeButton=null;
+    status.textContent="Please allow microphone access, then try again.";
+  }
+}
+
+buttons.forEach(button=>{
+  button.addEventListener("click",()=>recordWord(button));
+});
+
+reset.addEventListener("click",()=>{
+  if(activeRecorder && activeRecorder.state==="recording") activeRecorder.stop();
+  buttons.forEach(button=>{
+    button.disabled=false;
+    button.classList.remove("recording","recorded");
+    button.textContent=button.dataset.word;
+  });
+  Object.keys(recordings).forEach(k=>delete recordings[k]);
+  status.textContent="Tap a word once and Ollie can say that word.";
+});
+})();
+</script>
+</body>
+</html>
