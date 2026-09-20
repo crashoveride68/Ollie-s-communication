@@ -44,7 +44,6 @@ h1{font-size:clamp(26px,6vw,42px);color:#174b70;margin:0 0 20px}
 (function(){
 const mic=document.getElementById("mic");
 const status=document.getElementById("status");
-const transcript={textContent:""};
 const reset=document.getElementById("reset");
 const wordEls=[...document.querySelectorAll(".word")];
 const target=wordEls.map(x=>x.dataset.word);
@@ -122,7 +121,7 @@ function setup(){
    }
    if(completed.trim()) finalText+=" "+completed;
    const display=(finalText+" "+interim).trim();
-   transcript.textContent=display;
+   
    updateWords(display);
  };
 
@@ -155,8 +154,7 @@ function setup(){
  reset.addEventListener("click",()=>{
    finalText="";
    heardWords.clear();
-   transcript.textContent="";
-   wordEls.forEach(x=>x.classList.remove("recognised","current"));
+      wordEls.forEach(x=>x.classList.remove("recognised","current"));
    status.textContent=listening?"Listening... speak naturally.":"Tap the microphone and start talking.";
  });
 
