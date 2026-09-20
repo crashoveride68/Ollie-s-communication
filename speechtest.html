@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Speech Test</title>
+<style>
+body{font-family:Arial,sans-serif;text-align:center;background:#f5f7fb;padding:25px}
+h1{font-size:38px}
+button{font-size:30px;padding:25px 35px;border:0;border-radius:20px;background:#3478f6;color:white}
+#status{font-size:24px;margin:30px}
+#result{font-size:42px;font-weight:bold;background:white;border-radius:20px;padding:25px;min-height:55px}
+</style>
+</head>
+<body>
+<h1>🎤 Speech Test</h1>
+<p>Tap the button and say a word.</p>
+<button id="mic">🎤 Tap to Speak</button>
+<div id="status">Ready</div>
+<div id="result"></div>
+
+<script>
+const mic=document.getElementById("mic");
+const status=document.getElementById("status");
+const result=document.getElementById("result");
+
+const SpeechRecognition=window.SpeechRecognition||window.webkitSpeechRecognition;
+
+if(!SpeechRecognition){
+  status.textContent="Speech recognition is not available in this browser.";
+  mic.disabled=true;
+}else{
+  const recognition=new SpeechRecognition();
+  recognition.lang="en-AU";
+  recognition.continuous=false;
+  recognition.interimResults=false;
+  recognition.maxAlternatives=3;
+
+  mic.onclick=()=>{
+    result.textContent="";
+    status.textContent="Listening...";
+    try{
+      recognition.start();
+    }catch(e){
+      status.textContent="Please wait, then tap again.";
+    }
+  };
+
+  recognition.onstart=()=>{
+    status.textContent="🎤 Listening... Say something!";
+  };
+
+  recognition.onresult=(event)=>{
+    const text=event.results[0][0].transcript;
+    result.textContent=text;
+    status.textContent="✅ Speech recognised";
+  };
+
+  recognition.onerror=(event)=>{
+    status.textContent="❌ Error: "+event.error;
+    result.textContent="";
+  };
+
+  recognition.onend=()=>{
+    if(status.textContent.includes("Listening"))
+      status.textContent="Ready";
+  };
+}
+</script>
+</body>
+</html>
