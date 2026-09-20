@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Ollie's Speech Practice</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;padding:20px;font-family:Arial,sans-serif;text-align:center;background:#f4f7fb;color:#222}
+h1{font-size:34px;margin:8px 0}
+p{font-size:21px}
+#words{display:flex;flex-wrap:wrap;justify-content:center;gap:12px;max-width:900px;margin:25px auto}
+.word{font-size:34px;font-weight:bold;padding:22px 28px;border:0;border-radius:18px;background:white;box-shadow:0 4px 12px #0002}
+.word.active{background:#dceaff;outline:5px solid #3478f6}
+.word.done{background:#b9efc3;color:#155d20}
+.word.done::after{content:" ✓"}
+#sayBox{margin:25px auto;max-width:700px;background:white;border-radius:20px;padding:25px;box-shadow:0 4px 12px #0002}
+#target{font-size:48px;font-weight:bold;min-height:60px}
+#speechInput{width:90%;font-size:28px;padding:18px;border:3px solid #bbb;border-radius:15px;text-align:center}
+#check{margin-top:15px;font-size:26px;padding:16px 30px;border:0;border-radius:15px;background:#3478f6;color:white}
+#message{font-size:24px;font-weight:bold;min-height:35px;margin:18px}
+#reset{font-size:20px;padding:12px 22px;border:0;border-radius:12px}
+</style>
+</head>
+<body>
+
+<h1>Let's practise talking 😊</h1>
+<p>Tap a word. I'll say it. Then say the word into the box.</p>
+
+<div id="words">
+<button class="word" data-word="Can">Can</button>
+<button class="word" data-word="I">I</button>
+<button class="word" data-word="have">have</button>
+<button class="word" data-word="a">a</button>
+<button class="word" data-word="shower">shower</button>
+<button class="word" data-word="please">please</button>
+<button class="word" data-word="Daddy">Daddy</button>
+</div>
+
+<div id="sayBox">
+<div id="target">Tap a word</div>
+<input id="speechInput" type="text" inputmode="text" autocomplete="off" autocorrect="off" spellcheck="false" placeholder="Tap here and speak">
+<br>
+<button id="check">✓ Check Word</button>
+</div>
+
+<div id="message"></div>
+<button id="reset">Reset</button>
+
+<script>
+const buttons=[...document.querySelectorAll(".word")];
+const target=document.getElementById("target");
+const input=document.getElementById("speechInput");
+const check=document.getElementById("check");
+const message=document.getElementById("message");
+const reset=document.getElementById("reset");
+let selected=null;
+
+function speak(text){
+ if(!("speechSynthesis" in window)) return;
+ speechSynthesis.cancel();
+ const u=new SpeechSynthesisUtterance(text);
+ u.lang="en-AU";
+ u.rate=.75;
+ u.pitch=1.05;
+ const voices=speechSynthesis.getVoices();
+ const au=voices.find(v=>v.lang.toLowerCase().startsWith("en-au"));
+ if(au)u.voice=au;
+ speechSynthesis.speak(u);
+}
+
+function clean(s){
+ return s.toLowerCase().replace(/[^a-z]/g,"").trim();
+}
+
+function distance(a,b){
+ const d=Array.from({length:a.length+1},()=>Array(b.length+1).fill(0));
+ for(let i=0;i<=a.length;i++)d[i][0]=i;
+ for(let j=0;j<=b.length;j++)d[0][j]=j;
+ for(let i=1;i<=a.length;i++)
+  for(let j=1;j<=b.length;j++)
+   d[i][j]=a[i-1]===b[j-1]?d[i-1][j-1]:Math.min(d[i-1][j]+1,d[i][j-1]+1,d[i-1][j-1]+1);
+ return d[a.length][b.length];
+}
+
+function matches(spoken,word){
+ spoken=clean(spoken); word=clean(word);
+ if(!spoken)return false;
+ if(spoken===word||spoken.includes(word)||word.includes(spoken))return true;
+ const d=distance(spoken,word);
+ if(word.length<=2)return d<=1;
+ if(word.length<=4)return d<=2;
+ return d<=3;
+}
+
+buttons.forEach(btn=>{
+ btn.onclick=()=>{
+  if(btn.classList.contains("done"))return;
+  buttons.forEach(b=>b.classList.remove("active"));
+  selected=btn;
+  btn.classList.add("active");
+  target.textContent=btn.dataset.word;
+  input.value="";
+  message.textContent="Say: "+btn.dataset.word;
+  speak(btn.dataset.word);
+  setTimeout(()=>input.focus(),400);
+ };
+});
+
+check.onclick=()=>{
+ if(!selected){
+  message.textContent="Tap a word first.";
+  return;
+ }
+ const spoken=input.value;
+ if(matches(spoken,selected.dataset.word)){
+  selected.classList.remove("active");
+  selected.classList.add("done");
+  message.textContent="Great job! ✓";
+  const next=buttons.find(b=>!b.classList.contains("done"));
+  if(next){
+   setTimeout(()=>next.click(),700);
+  }else{
+   selected=null;
+   target.textContent="🎉 You did it!";
+   message.textContent="Can I have a shower please Daddy?";
+  }
+ }else{
+  message.textContent="Good try. Have another go.";
+  input.select();
+ };
+};
+
+input.addEventListener("keydown",e=>{
+ if(e.key==="Enter")check.click();
+});
+
+reset.onclick=()=>{
+ buttons.forEach(b=>b.classList.remove("active","done"));
+ selected=null;
+ target.textContent="Tap a word";
+ input.value="";
+ message.textContent="";
+ speechSynthesis.cancel();
+};
+
+if("speechSynthesis" in window)speechSynthesis.onvoiceschanged=()=>{};
+</script>
+</body>
+</html>
