@@ -1,0 +1,217 @@
+<!doctype html>
+<html lang="en-AU">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
+<title>Ollie's Talking Practice</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;padding:18px;font-family:Arial,sans-serif;background:#f4f7fb;color:#222;text-align:center}
+h1{font-size:clamp(28px,7vw,46px);margin:8px 0}
+.target{font-size:clamp(26px,6vw,42px);font-weight:bold;line-height:1.45;max-width:950px;margin:25px auto}
+.word{display:inline-block;margin:4px 6px;padding:7px 10px;border-radius:12px}
+.word.done{background:#b9efc3;color:#155d20}
+.word.current{background:#dceaff;outline:4px solid #3478f6}
+#mic{width:105px;height:105px;border:0;border-radius:50%;background:#3478f6;color:white;font-size:45px;box-shadow:0 5px 15px #0002}
+#mic.listening{background:#e53935;animation:pulse 1s infinite}
+@keyframes pulse{50%{transform:scale(1.08)}}
+#status{font-size:24px;font-weight:bold;min-height:40px;margin:20px}
+#heard{max-width:900px;min-height:80px;margin:15px auto;background:white;border-radius:18px;padding:18px;font-size:25px;color:#555}
+#reset{margin-top:15px;font-size:20px;padding:12px 24px;border:0;border-radius:12px}
+.small{font-size:16px;color:#777;margin-top:15px}
+</style>
+</head>
+<body>
+
+<h1>Let's practise talking 😊</h1>
+
+<div id="target" class="target"></div>
+
+<button id="mic" aria-label="Start speaking">🎤</button>
+
+<div id="status">Tap the microphone and say the sentence.</div>
+<div id="heard"></div>
+
+<button id="reset">Reset</button>
+<div class="small">Speak naturally. You don't have to say every word perfectly.</div>
+
+<script>
+const targetWords=["Can","I","have","a","shower","please","Daddy"];
+const target=document.getElementById("target");
+const mic=document.getElementById("mic");
+const status=document.getElementById("status");
+const heard=document.getElementById("heard");
+const reset=document.getElementById("reset");
+
+let recognition=null;
+let listening=false;
+
+function draw(wordsDone=-1,current=-1){
+ target.innerHTML="";
+ targetWords.forEach((w,i)=>{
+   const span=document.createElement("span");
+   span.className="word";
+   if(i<=wordsDone)span.classList.add("done");
+   if(i===current)span.classList.add("current");
+   span.textContent=w;
+   target.appendChild(span);
+ });
+}
+
+draw();
+
+function clean(s){
+ return s.toLowerCase()
+   .replace(/[^a-z\s]/g," ")
+   .replace(/\s+/g," ")
+   .trim();
+}
+
+function distance(a,b){
+ const d=Array.from({length:a.length+1},()=>Array(b.length+1).fill(0));
+ for(let i=0;i<=a.length;i++)d[i][0]=i;
+ for(let j=0;j<=b.length;j++)d[0][j]=j;
+ for(let i=1;i<=a.length;i++)
+   for(let j=1;j<=b.length;j++)
+     d[i][j]=a[i-1]===b[j-1]?d[i-1][j-1]:
+       Math.min(d[i-1][j]+1,d[i][j-1]+1,d[i-1][j-1]+1);
+ return d[a.length][b.length];
+}
+
+const aliases={
+ can:["can","ken","kan"],
+ i:["i","eye","aye"],
+ have:["have","hav","haf"],
+ a:["a","uh","ay","er"],
+ shower:["shower","show","showa","shower"],
+ please:["please","pleas","pleez"],
+ daddy:["daddy","dadi","daddie","dad","daddy"]
+};
+
+function closeWord(spoken,targetWord){
+ spoken=clean(spoken);
+ targetWord=clean(targetWord);
+ if(!spoken)return false;
+ if(aliases[targetWord].includes(spoken))return true;
+ if(spoken===targetWord||spoken.includes(targetWord)||targetWord.includes(spoken))return true;
+ const d=distance(spoken,targetWord);
+ return targetWord.length<=2 ? d<=1 :
+        targetWord.length<=4 ? d<=2 : d<=3;
+}
+
+function analyse(text){
+ const spoken=clean(text).split(" ").filter(Boolean);
+ let matched=0;
+
+ for(let i=0;i<targetWords.length;i++){
+   if(matched>=spoken.length)break;
+
+   // Try the next one or two recognised tokens against the target word.
+   let ok=false;
+   for(let take=1;take<=2 && matched+take<=spoken.length;take++){
+     const candidate=spoken.slice(matched,matched+take).join("");
+     if(closeWord(candidate,targetWords[i])){
+       matched+=take;
+       ok=true;
+       break;
+     }
+   }
+
+   if(!ok)break;
+ }
+ return matched;
+}
+
+function speak(text){
+ if(!("speechSynthesis" in window))return;
+ speechSynthesis.cancel();
+ const u=new SpeechSynthesisUtterance(text);
+ u.lang="en-AU";
+ u.rate=.78;
+ const voices=speechSynthesis.getVoices();
+ const au=voices.find(v=>v.lang.toLowerCase().startsWith("en-au"));
+ if(au)u.voice=au;
+ speechSynthesis.speak(u);
+}
+
+function startRecognition(){
+ const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+ if(!SR){
+   status.textContent="Speech recognition isn't available in this browser.";
+   return;
+ }
+
+ recognition=new SR();
+ recognition.lang="en-AU";
+ recognition.continuous=true;
+ recognition.interimResults=true;
+ recognition.maxAlternatives=5;
+
+ recognition.onstart=()=>{
+   listening=true;
+   mic.classList.add("listening");
+   mic.textContent="⏹️";
+   status.textContent="Listening... say the whole sentence.";
+ };
+
+ recognition.onresult=event=>{
+   let combined="";
+   for(let i=0;i<event.results.length;i++){
+     combined+=event.results[i][0].transcript+" ";
+   }
+   combined=combined.trim();
+   heard.textContent=combined || "";
+
+   const count=analyse(combined);
+
+   if(count>=targetWords.length){
+     draw(targetWords.length-1);
+     status.textContent="🎉 Great job! You said the sentence!";
+     speak("Great job!");
+     try{recognition.stop()}catch(e){}
+     return;
+   }
+
+   draw(count-1,count);
+   if(count>0){
+     status.textContent="Great! Keep going...";
+   }
+ };
+
+ recognition.onerror=event=>{
+   status.textContent="Recognition error: "+event.error;
+ };
+
+ recognition.onend=()=>{
+   listening=false;
+   mic.classList.remove("listening");
+   mic.textContent="🎤";
+ };
+
+ try{recognition.start()}catch(e){
+   status.textContent="Please tap the microphone again.";
+ }
+}
+
+mic.onclick=()=>{
+ if(listening){
+   try{recognition.stop()}catch(e){}
+   return;
+ }
+ heard.textContent="";
+ draw();
+ startRecognition();
+};
+
+reset.onclick=()=>{
+ if(recognition&&listening){try{recognition.stop()}catch(e){}}
+ speechSynthesis.cancel();
+ heard.textContent="";
+ status.textContent="Tap the microphone and say the sentence.";
+ draw();
+};
+
+if("speechSynthesis" in window)speechSynthesis.onvoiceschanged=()=>{};
+</script>
+</body>
+</html>
