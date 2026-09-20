@@ -179,11 +179,34 @@ function startRecognition(){
  };
 
  recognition.onerror=event=>{
+   if(event.error==="no-speech"){
+     status.textContent="Still listening... keep talking.";
+     return;
+   }
+
+   if(event.error==="aborted"){
+     return;
+   }
+
    status.textContent="Recognition error: "+event.error;
  };
 
  recognition.onend=()=>{
-   listening=false;
+   // Chrome on Android can end a SpeechRecognition session after a short
+   // period even when continuous=true. Restart automatically while Ollie
+   // is still using the microphone.
+   if(listening){
+     setTimeout(()=>{
+       if(!listening) return;
+       try{
+         recognition.start();
+       }catch(e){
+         // If Chrome says it is already starting/listening, leave it alone.
+       }
+     },150);
+     return;
+   }
+
    mic.classList.remove("listening");
    mic.textContent="🎤";
  };
