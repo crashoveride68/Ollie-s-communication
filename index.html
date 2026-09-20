@@ -24,8 +24,9 @@ h1{font-size:clamp(25px,6vw,42px);color:#174b70;margin:0 0 22px}
 <main class="card">
 <h1>Can Ollie have a shower please Daddy?</h1>
 
-<button id="mic" class="mic" type="button" aria-label="Start recognition for the selected word">🎤</button>
-<div id="status" class="status">Tap a word to practise it.</div>
+<button id="start" class="reset" type="button" style="font-size:24px;padding:16px 34px;margin-bottom:16px">▶️ Start</button>
+<button id="mic" class="mic" type="button" aria-label="Record the current word">🎤</button>
+<div id="status" class="status">Press Start to begin.</div>
 
 <div class="words" aria-label="Words to practise">
 <button class="word" type="button" data-word="can">Can</button>
@@ -45,12 +46,14 @@ h1{font-size:clamp(25px,6vw,42px);color:#174b70;margin:0 0 22px}
 const mic=document.getElementById("mic");
 const status=document.getElementById("status");
 const reset=document.getElementById("reset");
+const start=document.getElementById("start");
 const buttons=[...document.querySelectorAll(".word")];
 const Recognition=window.SpeechRecognition||window.webkitSpeechRecognition;
 
 let recognition=null;
 let selected=null;
 let listening=false;
+let started=false;
 
 function stopListening(){
   if(recognition && listening){
@@ -91,11 +94,31 @@ function startFor(button){
       }
     }
 
-    const target=button.dataset.word;
-    const spoken=heard.toLowerCase().replace(/[^a-z0-9\s]/g," ");
-    const words=spoken.split(/\s+/).filter(Boolean);
+    const target=button.dataset.word.toLowerCase();
+    const spoken=heard.toLowerCase().replace(/[^a-z0-9\\s]/g," ");
+    const words=spoken.split(/\\s+/).filter(Boolean);
 
-    if(words.includes(target)){
+    function distance(a,b){
+      const dp=Array.from({length:a.length+1},(_,i)=>Array(b.length+1).fill(0));
+      for(let i=0;i<=a.length;i++) dp[i][0]=i;
+      for(let j=0;j<=b.length;j++) dp[0][j]=j;
+      for(let i=1;i<=a.length;i++){
+        for(let j=1;j<=b.length;j++){
+          dp[i][j]=Math.min(dp[i-1][j]+1,dp[i][j-1]+1,
+            dp[i-1][j-1]+(a[i-1]===b[j-1]?0:1));
+        }
+      }
+      return dp[a.length][b.length];
+    }
+
+    const closeEnough=words.some(word=>{
+      if(word===target) return true;
+      if(word.includes(target) || target.includes(word)) return true;
+      const maxErrors=target.length<=2 ? 0 : target.length<=4 ? 1 : 2;
+      return distance(word,target)<=maxErrors;
+    });
+
+    if(closeEnough){
       stopListening();
       button.disabled=true;
       button.classList.remove("active");
@@ -103,9 +126,12 @@ function startFor(button){
       button.textContent="✓ "+button.textContent.trim();
 
       const remaining=buttons.filter(b=>!b.disabled).length;
-      status.textContent=remaining
-        ? "Great! Tap the next word."
-        : "All words recognised! 🎉";
+      if(remaining){
+        selected=buttons.find(b=>!b.disabled) || null;
+        setTimeout(announceCurrentWord, 250);
+      }else{
+        status.textContent="All words recognised! 🎉";
+      }
     }
   };
 
@@ -140,13 +166,32 @@ if(!Recognition){
   status.textContent="Live speech recognition isn't supported by this browser. Try Chrome on the Lenovo tablet.";
 }else{
   buttons.forEach(button=>{
-    button.addEventListener("click",()=>{
-      if(button.disabled || listening) return;
-      selected=button;
-      buttons.forEach(b=>b.classList.remove("active"));
-      button.classList.add("active");
-      status.textContent='Ready to record "'+button.textContent.trim()+'". Tap the microphone.';
-    });
+    button.addEventListener("click",()=>{});
+  });
+
+  function announceCurrentWord(){
+    if(!selected) return;
+    buttons.forEach(b=>b.classList.remove("active"));
+    selected.classList.add("active");
+    if ("speechSynthesis" in window) {
+      speechSynthesis.cancel();
+      const voice = new SpeechSynthesisUtterance(selected.dataset.word);
+      voice.lang = "en-AU";
+      voice.rate = 0.8;
+      const voices = speechSynthesis.getVoices();
+      const au = voices.find(v => v.lang && v.lang.toLowerCase().startsWith("en-au"));
+      if (au) voice.voice = au;
+      speechSynthesis.speak(voice);
+    }
+    status.textContent='Say "'+selected.dataset.word+'".';
+  }
+
+  start.addEventListener("click",()=>{
+    if(started) return;
+    started=true;
+    start.disabled=true;
+    selected=buttons.find(b=>!b.disabled) || null;
+    announceCurrentWord();
   });
 
   mic.addEventListener("click",()=>{
@@ -163,12 +208,14 @@ if(!Recognition){
 reset.addEventListener("click",()=>{
   stopListening();
   selected=null;
+  started=false;
+  start.disabled=false;
   buttons.forEach(button=>{
     button.disabled=false;
     button.classList.remove("active","recognised");
     button.textContent=button.dataset.word.charAt(0).toUpperCase()+button.dataset.word.slice(1);
   });
-  status.textContent="Tap a word to practise it.";
+  status.textContent="Press Start to begin.";
 });
 })();
 </script>
