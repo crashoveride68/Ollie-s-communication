@@ -1,0 +1,195 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Ollie's Shower Game</title>
+<style>
+*{box-sizing:border-box}body{margin:0;font-family:Arial,sans-serif;background:#dff6ff;color:#164e63}
+.game{max-width:780px;margin:auto;padding:18px;text-align:center}.box{background:#f8fdff;border:1px solid #b9e6f5;border-radius:26px;padding:18px}
+h1{font-size:30px;margin:4px 0}.sub{color:#52717d;margin-bottom:16px}
+.scene{background:linear-gradient(#67d3ff,#087db5);border-radius:22px;color:white;padding:22px}
+.instruction{font-size:20px;font-weight:800}.sentence{font-size:29px;font-weight:900;line-height:1.7;margin:18px auto;max-width:700px}
+.word{display:inline-block;margin:4px 5px;padding:7px 11px;border-radius:13px;background:#ffffff40;transition:.18s}
+.word.heard{background:#bbf7d0;color:#166534;transform:scale(1.04)}
+.word.active{background:#fff;color:#075985;box-shadow:0 0 0 4px #ffffff55}
+.mic{width:125px;height:125px;border:0;border-radius:50%;background:white;color:#075985;font-size:50px;cursor:pointer;box-shadow:0 5px 0 #075985}
+.mic.listening{background:#bbf7d0;animation:pulse 1s infinite}@keyframes pulse{50%{transform:scale(1.07)}}
+.status{font-weight:800;min-height:28px;margin-top:15px}.message{font-size:19px;font-weight:800;min-height:32px;margin:15px 0}
+.progress{height:12px;background:#ffffff66;border-radius:20px;overflow:hidden;margin-top:15px}.fill{height:100%;width:0;background:white;transition:.15s}
+.buttons{display:flex;justify-content:center;gap:10px;flex-wrap:wrap;margin-top:14px}.action{border:0;border-radius:14px;padding:13px 19px;font-weight:800;background:#164e63;color:white;cursor:pointer}.alt{background:white;color:#164e63;border:2px solid #cbd5e1}
+.transcript{font-size:15px;color:#52717d;min-height:24px;margin-top:8px}
+.animal{min-height:0;font-size:76px;line-height:1;margin:4px 0;opacity:0;transform:scale(.4) translateY(15px);transition:.5s}
+.animal.show{opacity:1;transform:scale(1) translateY(0);animation:animalBounce 1.4s ease-in-out infinite}
+@keyframes animalBounce{0%,100%{transform:translateY(0) scale(1)}50%{transform:translateY(-10px) scale(1.04)}}
+.animal-name{font-size:22px;font-weight:900;margin-top:5px}
+</style>
+</head>
+<body>
+<div class="game"><div class="box">
+<h1>🚿 Ollie's Shower Game</h1>
+<div class="sub">Say the sentence and watch the words light up!</div>
+
+<div class="scene">
+<div class="instruction" id="instruction">Ready?</div>
+
+<div class="sentence" id="sentence">
+<span class="word" data-word="can">CAN</span>
+<span class="word" data-word="i">I</span>
+<span class="word" data-word="have">HAVE</span>
+<span class="word" data-word="a">A</span>
+<span class="word" data-word="shower">SHOWER</span>
+</div>
+
+<button class="mic" id="mic" aria-label="Start listening">🎤</button>
+<div class="status" id="status">Tap the microphone and say the whole sentence.</div>
+<div class="progress"><div class="fill" id="fill"></div></div>
+</div>
+
+<div class="message" id="message">Can I have a shower?</div>
+<div class="animal" id="animal" aria-live="polite"></div>
+<div class="transcript" id="transcript"></div>
+
+<div class="buttons">
+<button class="action" id="hear">🔊 Hear sentence</button>
+<button class="action alt" id="reset">↻ Try again</button>
+</div>
+</div></div>
+
+<script>
+(function(){
+const target=["can","i","have","a","shower"];
+const animals=[
+  ["🐬","DOLPHIN"],["🐠","TROPICAL FISH"],["🐙","OCTOPUS"],
+  ["🦈","SHARK"],["🐢","SEA TURTLE"],["🦀","CRAB"],
+  ["🐳","WHALE"],["🐋","BLUE WHALE"],["🦑","SQUID"],["🐟","FISH"]
+];
+let recognition=null,listening=false,completed=false;
+
+const $=id=>document.getElementById(id);
+const mic=$("mic"),status=$("status"),message=$("message"),fill=$("fill"),transcript=$("transcript"),instruction=$("instruction"),animal=$("animal");
+const spans=[...document.querySelectorAll(".word")];
+
+const aliases={
+ can:["can","ken"], i:["i","eye","aye"], have:["have","hav","av"],
+ a:["a","uh","ay"], shower:["shower","show","showa","shawa"]
+};
+
+function speak(text){
+ if(!("speechSynthesis"in window))return;
+ speechSynthesis.cancel();
+ const u=new SpeechSynthesisUtterance(text);
+ u.lang="en-AU";u.rate=.75;speechSynthesis.speak(u);
+}
+
+function clean(text){
+ return text.toLowerCase().replace(/[^a-z\s']/g," ").replace(/\s+/g," ").trim();
+}
+
+function findRecognised(text){
+ const heard=clean(text).split(" ").filter(Boolean);
+ const found=[];
+ target.forEach((word,index)=>{
+   if(heard.some(h=>h===word||(aliases[word]||[]).includes(h)||h.includes(word)))
+     found.push(index);
+ });
+ return [...new Set(found)];
+}
+
+function showAnimal(){
+ const pick=animals[Math.floor(Math.random()*animals.length)];
+ animal.innerHTML='<div>'+pick[0]+'</div><div class="animal-name">'+pick[1]+'</div>';
+ animal.classList.add("show");
+}
+
+function update(text){
+ const found=findRecognised(text);
+ spans.forEach((s,i)=>{
+   s.classList.toggle("heard",found.includes(i));
+   s.classList.toggle("active",false);
+ });
+ fill.style.width=(found.length/target.length*100)+"%";
+ transcript.textContent=text?"Heard: “"+text+"”":"";
+
+ if(found.length===target.length){
+   if(!completed){
+     completed=true;
+     instruction.textContent="🎉 Amazing!";
+     status.textContent="You said every word!";
+     message.textContent="🌟 CAN I HAVE A SHOWER? 🌟";
+     showAnimal();
+     speak("Can I have a shower");
+   }
+ }else{
+   const next=target.findIndex((w,i)=>!found.includes(i));
+   if(next>=0)spans[next].classList.add("active");
+   message.textContent="Keep going!";
+ }
+}
+
+function start(){
+ const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+ if(!SR){
+   status.textContent="Speech recognition isn't supported here.";
+   message.textContent="Please open the file in Chrome.";
+   return;
+ }
+ if(listening)return;
+ completed=false;
+ recognition=new SR();
+ recognition.lang="en-AU";
+ recognition.continuous=true;
+ recognition.interimResults=true;
+ recognition.maxAlternatives=3;
+ listening=true;
+ mic.classList.add("listening");
+ instruction.textContent="🎤 Listening…";
+ status.textContent="Say: Can I have a shower";
+ message.textContent="I'm listening!";
+ transcript.textContent="";
+
+ recognition.onresult=e=>{
+   let text="";
+   for(let i=0;i<e.results.length;i++){
+     text+=" "+e.results[i][0].transcript;
+   }
+   update(text.trim());
+ };
+
+ recognition.onerror=e=>{
+   if(e.error==="not-allowed"||e.error==="service-not-allowed"){
+     message.textContent="Please allow microphone access.";
+   }else{
+     message.textContent="I couldn't hear that clearly. Keep going.";
+   }
+ };
+
+ recognition.onend=()=>{
+   listening=false;
+   mic.classList.remove("listening");
+   if(!completed){
+     instruction.textContent="Ready?";
+     status.textContent="Tap 🎤 to try again";
+   }
+ };
+ try{recognition.start()}catch(e){}
+}
+
+mic.addEventListener("click",start);
+$("hear").addEventListener("click",()=>speak("Can I have a shower"));
+$("reset").addEventListener("click",()=>{
+ if(recognition)try{recognition.stop()}catch(e){}
+ speechSynthesis.cancel();
+ listening=false;completed=false;mic.classList.remove("listening");
+ animal.classList.remove("show");
+ animal.innerHTML="";
+ spans.forEach(s=>s.classList.remove("heard","active"));
+ fill.style.width="0%";transcript.textContent="";
+ instruction.textContent="Ready?";status.textContent="Tap the microphone and say the whole sentence.";
+ message.textContent="Can I have a shower?";
+});
+
+})();
+</script>
+</body>
+</html>
