@@ -63,7 +63,12 @@ h1{font-size:30px;margin:4px 0}.sub{color:#52717d;margin-bottom:16px}
 </div>
 
 <div class="message" id="message">Can I have a shower?</div>
-<div class="hatch" id="hatch" aria-live="polite"></div>
+<div class="hatch show" id="hatch" aria-live="polite">
+      <div class="egg-stage">
+        <div class="egg">🥚</div><div class="crack">〰<br>╱╲</div><div class="baby" id="baby"></div>
+      </div>
+      <div class="animal-name" id="animal-name">Your ocean animal is waiting!</div>
+    </div>
 <div class="transcript" id="transcript"></div>
 
 <div class="buttons">
@@ -114,10 +119,11 @@ function findRecognised(text){
 
 function showAnimal(){
  const pick=animals[Math.floor(Math.random()*animals.length)];
+ document.getElementById("baby").textContent=pick[0];
+ document.getElementById("animal-name").textContent=pick[1];
  hatch.className="hatch show";
- hatch.innerHTML='<div class="egg-stage"><div class="egg">🥚</div><div class="crack">〰<br>╱╲</div><div class="baby">'+pick[0]+'</div></div><div class="animal-name">'+pick[1]+'</div>';
- setTimeout(()=>hatch.classList.add("cracking"),700);
- setTimeout(()=>hatch.classList.add("revealed"),1450);
+ setTimeout(()=>hatch.classList.add("cracking"),100);
+ setTimeout(()=>hatch.classList.add("revealed"),850);
 }
 
 function update(text){
@@ -199,8 +205,8 @@ $("reset").addEventListener("click",()=>{
  if(recognition)try{recognition.stop()}catch(e){}
  speechSynthesis.cancel();
  listening=false;completed=false;mic.classList.remove("listening");
- hatch.className="hatch";
- hatch.innerHTML="";
+ hatch.className="hatch show";
+ hatch.innerHTML='<div class="egg-stage"><div class="egg">🥚</div><div class="crack">〰<br>╱╲</div><div class="baby" id="baby"></div></div><div class="animal-name" id="animal-name">Your ocean animal is waiting!</div>';
  spans.forEach(s=>s.classList.remove("heard","active"));
  fill.style.width="0%";transcript.textContent="";
  instruction.textContent="Ready?";status.textContent="Tap the microphone and say the whole sentence.";
