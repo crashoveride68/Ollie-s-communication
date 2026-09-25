@@ -1,0 +1,142 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Ollie's Shower Game</title>
+<style>
+*{box-sizing:border-box}body{margin:0;font-family:Arial,sans-serif;background:#dff6ff;color:#164e63}
+.game{max-width:760px;margin:auto;padding:18px;text-align:center}.box{background:#f8fdff;border:1px solid #b9e6f5;border-radius:26px;padding:18px}
+h1{font-size:30px;margin:4px 0}.sub{color:#52717d;margin-bottom:16px}
+.scene{background:linear-gradient(#67d3ff,#087db5);border-radius:22px;color:white;padding:20px}
+.instruction{font-size:20px;font-weight:700}.target{font-size:52px;font-weight:900;margin:8px}
+.mic{width:118px;height:118px;border:0;border-radius:50%;background:white;color:#075985;font-size:48px;cursor:pointer;box-shadow:0 5px 0 #075985}
+.mic.listening{background:#bbf7d0;animation:pulse 1s infinite}@keyframes pulse{50%{transform:scale(1.07)}}
+.status{font-weight:800;min-height:28px;margin-top:12px}.progress{height:12px;background:#ffffff66;border-radius:20px;margin-top:15px;overflow:hidden}.fill{height:100%;width:0;background:white;transition:.3s}
+.words{display:flex;flex-wrap:wrap;justify-content:center;gap:8px;margin:16px 0}.pill{padding:9px 12px;border-radius:20px;background:white;border:2px solid #cbd5e1;font-weight:800}.done{background:#bbf7d0;border-color:#22c55e;color:#166534}.next{border-color:#0284c7}
+.message{font-size:18px;font-weight:800;min-height:32px}.buttons{display:flex;justify-content:center;gap:10px;flex-wrap:wrap;margin-top:12px}
+.action{border:0;border-radius:14px;padding:13px 19px;font-weight:800;background:#164e63;color:white;cursor:pointer}.alt{background:white;color:#164e63;border:2px solid #cbd5e1}
+.complete{font-size:25px;font-weight:900;color:#164e63;padding:12px}
+</style>
+</head>
+<body>
+<div class="game"><div class="box">
+<h1>🚿 Ollie's Shower Game</h1>
+<div class="sub">Listen • Say the word • Build the sentence</div>
+<div class="scene">
+<div class="instruction" id="instruction">Listen!</div>
+<div class="target" id="target">CAN</div>
+<button class="mic" id="mic" aria-label="Start listening">🎤</button>
+<div class="status" id="status">Get ready…</div>
+<div class="progress"><div class="fill" id="fill"></div></div>
+</div>
+<div class="words" id="words"></div>
+<div class="message" id="message">The game will say the word for you.</div>
+<div class="buttons">
+<button class="action" id="repeat">🔊 Repeat word</button>
+<button class="action alt" id="manual">🎤 Say it</button>
+<button class="action alt" id="reset">↻ Start again</button>
+</div>
+</div></div>
+
+<script>
+(function(){
+const words=["CAN","I","HAVE","A","SHOWER","PLEASE","DADDY"];
+let pos=0, recognition=null, listening=false, autoTimer=null;
+const $=id=>document.getElementById(id);
+const target=$("target"),status=$("status"),fill=$("fill"),wordsBox=$("words"),message=$("message"),mic=$("mic"),instruction=$("instruction");
+
+function render(){
+ wordsBox.innerHTML="";
+ words.forEach((w,i)=>{
+  const s=document.createElement("span");
+  s.className="pill "+(i<pos?"done ":"")+(i===pos?"next":"");
+  s.textContent=i<pos?"✓ "+w:w;
+  wordsBox.appendChild(s);
+ });
+ if(pos<words.length){
+  target.textContent=words[pos];
+  fill.style.width=(pos/words.length*100)+"%";
+ }else finish();
+}
+
+function speak(text,callback){
+ if(!("speechSynthesis"in window)){if(callback)callback();return;}
+ speechSynthesis.cancel();
+ const u=new SpeechSynthesisUtterance(text.toLowerCase());
+ u.lang="en-AU";u.rate=.75;
+ u.onend=()=>{if(callback)callback()};
+ speechSynthesis.speak(u);
+}
+
+function normalise(s){return s.toLowerCase().replace(/[^a-z\s]/g,"").trim()}
+
+function acceptable(spoken,targetWord){
+ spoken=normalise(spoken);const t=targetWord.toLowerCase();
+ if(spoken===t||spoken.includes(t))return true;
+ const aliases={
+  "i":["eye","aye"],"a":["uh","ay"],"can":["ken","kann"],
+  "have":["av","hav"],"shower":["showa","shawa","show"],
+  "please":["pleez","pleas"],"daddy":["dadi","dad"]
+ };
+ return (aliases[t]||[]).some(x=>spoken.includes(x));
+}
+
+function startListening(){
+ if(pos>=words.length)return;
+ const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+ if(!SR){status.textContent="Speech recognition isn't supported here.";message.textContent="Open this file in Chrome and allow microphone access.";return}
+ if(listening)return;
+ recognition=new SR();recognition.lang="en-AU";recognition.continuous=false;recognition.interimResults=false;recognition.maxAlternatives=5;
+ listening=true;mic.classList.add("listening");instruction.textContent="🎤 Your turn";status.textContent="Listening…";message.textContent="Say "+words[pos].toLowerCase();
+ recognition.onresult=e=>{
+  let heard="";
+  for(let i=0;i<e.results[0].length;i++)heard+=" "+e.results[0][i].transcript;
+  heard=heard.trim();
+  if(acceptable(heard,words[pos])){
+   message.textContent="✅ Great!";
+   pos++;render();
+   if(pos<words.length)setTimeout(playNext,500);
+  }else{
+   message.textContent="Good try — let's try that word again.";
+   status.textContent="I heard: "+heard;
+   setTimeout(()=>playNext(),500);
+  }
+ };
+ recognition.onerror=e=>{
+  if(e.error==="not-allowed"||e.error==="service-not-allowed")message.textContent="Please allow microphone access.";
+  else message.textContent="I didn't catch that. Let's try again.";
+ };
+ recognition.onend=()=>{listening=false;mic.classList.remove("listening")};
+ try{recognition.start()}catch(e){}
+}
+
+function playNext(){
+ if(pos>=words.length){finish();return}
+ instruction.textContent="Listen!";
+ status.textContent="Listen to the word…";
+ message.textContent="Then say it!";
+ speak(words[pos],()=>{instruction.textContent="🎤 Your turn";status.textContent="Now say "+words[pos].toLowerCase();startListening()});
+}
+
+function finish(){
+ target.textContent="🎉";fill.style.width="100%";instruction.textContent="Amazing!";
+ status.textContent="You said every word!";
+ message.textContent="🌟 Can I have a shower please daddy! 🌟";
+ wordsBox.innerHTML='<div class="complete">CAN I HAVE A SHOWER PLEASE DADDY</div>';
+ speak("Can I have a shower please daddy");
+}
+
+$("manual").addEventListener("click",startListening);
+$("mic").addEventListener("click",startListening);
+$("repeat").addEventListener("click",()=>{if(pos<words.length)speak(words[pos])});
+$("reset").addEventListener("click",()=>{
+ if(recognition)try{recognition.stop()}catch(e){}
+ speechSynthesis.cancel();pos=0;instruction.textContent="Listen!";message.textContent="The game will say the word for you.";render();setTimeout(playNext,700);
+});
+render();
+setTimeout(playNext,700);
+})();
+</script>
+</body>
+</html>
