@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>Ollie's Ocean Adventure 3 - Fixed</title>
+<style>
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}html,body{margin:0;height:100%;overflow:hidden;font-family:Arial,sans-serif;background:#00182f;color:#fff}button{font:inherit}
+#app{height:100%;position:relative;overflow:hidden;background:linear-gradient(#13b9df,#0879aa 46%,#00385c 100%)}
+#app:after{content:"";position:absolute;inset:0;pointer-events:none;background:radial-gradient(ellipse at 50% -10%,rgba(255,255,255,.25),transparent 45%)}
+.screen{position:absolute;inset:0;display:none;z-index:2}.screen.active{display:block}
+.bubbles{position:absolute;inset:0;overflow:hidden;pointer-events:none}.bubble{position:absolute;border:2px solid rgba(255,255,255,.5);border-radius:50%;animation:rise linear infinite}@keyframes rise{from{transform:translateY(110vh)}to{transform:translateY(-15vh)}}
+.hud{position:absolute;z-index:20;left:0;right:0;top:0;padding:12px;display:flex;justify-content:space-between;align-items:center}.pill,.hud button{border:0;border-radius:16px;padding:10px 14px;background:rgba(255,255,255,.94);color:#00567f;font-weight:900}.pill{background:rgba(0,35,60,.6);color:#fff}
+.home{height:100%;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;padding:20px}.logo{font-size:clamp(38px,9vw,76px);font-weight:1000;text-shadow:0 5px #003553}.tag{font-size:clamp(18px,4vw,27px);font-weight:bold}.hero{font-size:clamp(95px,23vw,190px);animation:float 3s ease-in-out infinite}@keyframes float{50%{transform:translateY(-12px) rotate(2deg)}}
+.menu{width:min(92vw,550px);display:grid;gap:12px}.menu button,.primary{border:0;border-radius:24px;padding:18px;background:#fff;color:#00567f;font-weight:1000;font-size:clamp(21px,5vw,30px);box-shadow:0 7px #003553}.menu button:active,.primary:active{transform:translateY(5px);box-shadow:0 2px #003553}
+.world{position:absolute;inset:0;overflow:hidden}.zoneTitle{text-align:center;font-size:clamp(26px,6vw,45px);font-weight:1000;margin-top:62px;text-shadow:0 4px #003553}.map{position:absolute;inset:100px 0 0;overflow:hidden}
+.sub{position:absolute;font-size:72px;filter:drop-shadow(0 8px 5px #00233b);transition:left .7s ease,top .7s ease;z-index:10}.sub:after{content:"";position:absolute;right:-100px;top:30px;width:150px;height:55px;background:linear-gradient(90deg,rgba(255,255,180,.3),transparent);clip-path:polygon(0 45%,100% 0,100% 100%)}
+.node{position:absolute;width:105px;height:105px;border-radius:50%;border:4px solid rgba(255,255,255,.7);background:rgba(0,60,95,.55);display:flex;align-items:center;justify-content:center;flex-direction:column;font-size:48px;box-shadow:0 0 22px rgba(255,255,255,.15);z-index:5}.node span{font-size:14px;font-weight:900}.node.locked{filter:grayscale(1);opacity:.45}.node.found{background:rgba(45,210,105,.45)}
+#n0{left:8%;top:18%}#n1{left:39%;top:10%}#n2{left:70%;top:23%}#n3{left:17%;top:52%}#n4{left:52%;top:45%}#n5{left:77%;top:61%}#n6{left:38%;top:76%}
+.seaweed{position:absolute;bottom:-12px;font-size:90px;animation:sway 3s ease-in-out infinite;transform-origin:bottom}@keyframes sway{50%{transform:rotate(5deg)}}
+.game{height:100%;padding-top:70px;text-align:center}.gameAnimal{font-size:clamp(90px,20vw,180px);animation:float 2.7s ease-in-out infinite}.name{font-size:clamp(34px,7vw,58px);font-weight:1000;text-shadow:0 4px #003553}.hint{font-size:21px;font-weight:bold}.word{display:flex;justify-content:center;gap:7px;flex-wrap:wrap;margin:8px}.slot{width:clamp(35px,8vw,62px);height:clamp(48px,10vw,70px);border:3px solid #fff;border-radius:16px;background:rgba(255,255,255,.2);display:flex;align-items:center;justify-content:center;font-size:clamp(24px,6vw,38px);font-weight:1000}.slot.done{background:#32d76b}.letters{position:absolute;bottom:18px;left:50%;transform:translateX(-50%);width:min(94vw,720px);display:grid;grid-template-columns:repeat(5,1fr);gap:9px}.letter{min-height:62px;border:0;border-radius:18px;background:#fff;color:#00567f;font-size:clamp(23px,6vw,36px);font-weight:1000;box-shadow:0 6px #003553}.letter:active{transform:translateY(5px);box-shadow:0 1px #003553}.letter.used{opacity:.18;pointer-events:none}
+#modal{position:absolute;inset:0;z-index:50;background:rgba(0,20,45,.74);display:none;align-items:center;justify-content:center}.card{background:#fff;color:#00567f;border-radius:32px;width:min(90vw,520px);padding:28px;text-align:center;box-shadow:0 12px #002d49}.card .big{font-size:100px}.card h2{font-size:38px;margin:3px}.card p{font-size:20px}.primary{width:100%;background:#0aaad2;color:#fff;box-shadow:0 6px #004c70}
+.collection{padding:75px 14px 20px;overflow:auto}.title{text-align:center;font-size:36px;text-shadow:0 4px #003553}.grid{max-width:900px;margin:auto;display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:13px}.collect{padding:15px;border-radius:22px;text-align:center;background:rgba(255,255,255,.16);border:2px solid rgba(255,255,255,.3);min-height:145px}.collect .emoji{font-size:62px}.locked{opacity:.35}
+</style>
+</head>
+<body>
+<div id="app"><div class="bubbles" id="bubbles"></div><div class="seaweed" style="left:3%">🌿</div><div class="seaweed" style="right:3%;animation-delay:1s">🌿</div>
+
+<section id="home" class="screen active"><div class="home"><div class="logo">🌊 OLLIE'S OCEAN</div><div class="tag">ADVENTURE</div><div class="hero">🚤</div><div class="menu"><button onclick="openWorld()">🗺️ EXPLORE THE OCEAN</button><button onclick="showCollection()">🐠 MY AQUARIUM</button></div></div></section>
+
+<section id="world" class="screen"><div class="hud"><button onclick="home()">← Home</button><div class="pill" id="stars">⭐ 0</div><div class="pill" id="found">🐠 0 / 7</div></div>
+<div class="world"><div class="zoneTitle" id="zone">🌊 Ocean Map</div><div class="map">
+<div id="sub" class="sub">🚤</div>
+<div class="node" id="n0" onclick="visit(0)">🐠<span>Coral Reef</span></div>
+<div class="node" id="n1" onclick="visit(1)">🦀<span>Crab Cove</span></div>
+<div class="node" id="n2" onclick="visit(2)">🐢<span>Turtle Bay</span></div>
+<div class="node" id="n3" onclick="visit(3)">🐬<span>Dolphin Point</span></div>
+<div class="node" id="n4" onclick="visit(4)">🐙<span>Octopus Cave</span></div>
+<div class="node" id="n5" onclick="visit(5)">🦈<span>Shark Reef</span></div>
+<div class="node" id="n6" onclick="visit(6)">🐋<span>Whale Valley</span></div>
+</div></div></section>
+
+<section id="game" class="screen"><div class="hud"><button onclick="openWorld()">← Map</button><div class="pill" id="gstars">⭐ 0</div><div class="pill" id="gzone">Mission</div></div><div class="game"><div class="gameAnimal" id="animal">🐠</div><div class="name" id="name">FISH</div><div class="hint">Build the animal's name!</div><div class="word" id="word"></div><div class="letters" id="letters"></div></div></section>
+
+<section id="collection" class="screen"><div class="hud"><button onclick="home()">← Home</button><div class="pill" id="ccount">0 / 7</div><div></div></div><h2 class="title">🐠 Ollie's Aquarium</h2><div class="grid" id="grid"></div></section>
+
+<div id="modal"><div class="card"><div class="big" id="memoji">🐬</div><h2>MISSION COMPLETE! 🎉</h2><p id="mtext"></p><button class="primary" onclick="closeMission()">🗺️ Back to Map</button></div></div>
+</div>
+<script>
+const places=[
+{name:"FISH",emoji:"🐠",x:"8%",y:"18%"},{name:"CRAB",emoji:"🦀",x:"39%",y:"10%"},{name:"TURTLE",emoji:"🐢",x:"70%",y:"23%"},
+{name:"DOLPHIN",emoji:"🐬",x:"17%",y:"52%"},{name:"OCTOPUS",emoji:"🐙",x:"52%",y:"45%"},{name:"SHARK",emoji:"🦈",x:"77%",y:"61%"},{name:"WHALE",emoji:"🐋",x:"38%",y:"76%"}];
+let unlocked=Number(localStorage.getItem("ocean3Unlocked")||0),stars=Number(localStorage.getItem("ocean3Stars")||0),current=0,pos=0;
+for(let i=0;i<24;i++){let b=document.createElement("i");b.className="bubble";let s=7+Math.random()*25;b.style.width=s+"px";b.style.height=s+"px";b.style.left=Math.random()*100+"%";b.style.animationDuration=7+Math.random()*9+"s";b.style.animationDelay=-Math.random()*12+"s";document.getElementById("bubbles").appendChild(b)}
+function show(id){document.querySelectorAll(".screen").forEach(x=>x.classList.remove("active"));document.getElementById(id).classList.add("active")}
+function home(){document.getElementById("modal").style.display="none";show("home")}
+function openWorld(){refreshWorld();show("world")}
+function refreshWorld(){document.getElementById("stars").textContent="⭐ "+stars;document.getElementById("found").textContent=`🐠 ${unlocked} / ${places.length}`;places.forEach((p,i)=>{let n=document.getElementById("n"+i);n.classList.toggle("locked",i>unlocked);n.classList.toggle("found",i<unlocked)})}
+function visit(i){if(i>unlocked)return;current=i;let sub=document.getElementById("sub");sub.style.left=places[i].x;sub.style.top=places[i].y;setTimeout(()=>startMission(i),500)}
+function startMission(i){pos=0;let p=places[i];document.getElementById("animal").textContent=p.emoji;document.getElementById("name").textContent=p.name;document.getElementById("gstars").textContent="⭐ "+stars;document.getElementById("gzone").textContent="Mission "+(i+1);render();show("game")}
+function render(){let w=places[current].name;document.getElementById("word").innerHTML=[...w].map((c,i)=>`<div class="slot ${i<pos?"done":""}">${i<pos?c:""}</div>`).join("");let chars=[...w];let pool="ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("").filter(x=>!w.includes(x));pool.sort(()=>Math.random()-.5);chars=[...chars,...pool.slice(0,Math.max(0,10-chars.length))];chars.sort(()=>Math.random()-.5);document.getElementById("letters").innerHTML=chars.map((c,i)=>`<button class="letter" onclick="tap('${c}',this)">${c}</button>`).join("")}function tap(c,b){let w=places[current].name;if(c===w[pos]){b.classList.add("used");pos++;stars+=10;save();speak(c);let s=document.querySelectorAll(".slot")[pos-1];s.classList.add("done");s.textContent=c;if(pos===w.length)setTimeout(complete,400)}else{b.animate([{transform:"translateX(-8px)"},{transform:"translateX(8px)"},{transform:"translateX(0)"}],{duration:180});speak("Try again")}}
+function complete(){if(current===unlocked){unlocked++;localStorage.setItem("ocean3Unlocked",unlocked)}save();document.getElementById("memoji").textContent=places[current].emoji;document.getElementById("mtext").textContent=`You discovered the ${places[current].name.toLowerCase()}! You found 10 stars.`;document.getElementById("modal").style.display="flex";speak("Mission complete!")}
+function closeMission(){document.getElementById("modal").style.display="none";openWorld()}
+function save(){localStorage.setItem("ocean3Stars",stars)}
+function speak(t){if("speechSynthesis"in window){speechSynthesis.cancel();let u=new SpeechSynthesisUtterance(t);u.rate=.82;u.pitch=1.12;speechSynthesis.speak(u)}}
+function showCollection(){document.getElementById("ccount").textContent=`${unlocked} / ${places.length}`;document.getElementById("grid").innerHTML=places.map((p,i)=>`<div class="collect ${i<unlocked?"":"locked"}"><div class="emoji">${i<unlocked?p.emoji:"🔒"}</div><b>${i<unlocked?p.name:"Unknown"}</b><div>${i<unlocked?"⭐ Discovered":"Explore to unlock"}</div></div>`).join("");show("collection")}
+</script>
+</body>
+</html>
