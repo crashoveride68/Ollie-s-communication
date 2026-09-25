@@ -39,6 +39,27 @@ h1{font-size:30px;margin:4px 0}.sub{color:#52717d;margin-bottom:16px}
 @keyframes eggBreak{0%{transform:scale(1)}45%{transform:scale(1.08) rotate(5deg)}100%{transform:scale(.3) rotate(-12deg);opacity:0}}
 @keyframes crackPop{0%{transform:scale(.5);opacity:0}100%{transform:scale(1.2);opacity:1}}
 @keyframes babyPop{0%{opacity:0;transform:scale(.2) translateY(55px)}70%{opacity:1;transform:scale(1.12) translateY(-10px)}100%{opacity:1;transform:scale(1) translateY(0)}}
+
+/* Portrait tablet/phone layout */
+body{min-height:100vh}
+.game{width:100%;max-width:520px;margin:0 auto;padding:10px}
+.box{padding:14px;border-radius:22px}
+h1{font-size:26px}.sub{font-size:15px;margin-bottom:10px}
+.scene{padding:14px;border-radius:20px}
+.sentence{font-size:25px;line-height:1.55;margin:12px auto}
+.word{margin:3px;padding:6px 8px}
+.mic{width:105px;height:105px;font-size:42px}
+.hatch.show{height:155px}
+.egg-stage{height:145px}
+.egg{font-size:82px}
+.hatch .baby{font-size:68px}
+@media (max-width:380px){
+ .game{padding:6px}.box{padding:10px}
+ h1{font-size:23px}.sentence{font-size:22px}
+ .mic{width:92px;height:92px;font-size:38px}
+ .hatch.show{height:135px}.egg-stage{height:125px}.egg{font-size:72px}.hatch .baby{font-size:58px}
+}
+
 </style>
 </head>
 <body>
