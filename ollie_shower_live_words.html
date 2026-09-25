@@ -23,6 +23,22 @@ h1{font-size:30px;margin:4px 0}.sub{color:#52717d;margin-bottom:16px}
 .animal.show{opacity:1;transform:scale(1) translateY(0);animation:animalBounce 1.4s ease-in-out infinite}
 @keyframes animalBounce{0%,100%{transform:translateY(0) scale(1)}50%{transform:translateY(-10px) scale(1.04)}}
 .animal-name{font-size:22px;font-weight:900;margin-top:5px}
+.question{display:inline-block;margin-left:2px}
+.hatch{min-height:0;height:0;overflow:hidden;opacity:0;transition:.4s}
+.hatch.show{height:190px;opacity:1;margin-top:8px}
+.egg-stage{position:relative;height:180px;display:flex;align-items:center;justify-content:center}
+.egg{font-size:100px;line-height:1;display:block;filter:drop-shadow(0 5px 2px #07598555)}
+.hatch.show .egg{animation:eggWobble .55s ease-in-out 2}
+.crack{position:absolute;font-size:34px;font-weight:900;opacity:0;color:#164e63}
+.hatch.cracking .crack{opacity:1;animation:crackPop .55s ease-out forwards}
+.hatch.cracking .egg{animation:eggBreak .75s ease-out forwards}
+.hatch .baby{position:absolute;font-size:78px;opacity:0;transform:scale(.2) translateY(55px)}
+.hatch.revealed .egg{opacity:0}
+.hatch.revealed .baby{opacity:1;animation:babyPop .8s cubic-bezier(.2,.8,.2,1) forwards}
+@keyframes eggWobble{25%{transform:rotate(-7deg)}75%{transform:rotate(7deg)}}
+@keyframes eggBreak{0%{transform:scale(1)}45%{transform:scale(1.08) rotate(5deg)}100%{transform:scale(.3) rotate(-12deg);opacity:0}}
+@keyframes crackPop{0%{transform:scale(.5);opacity:0}100%{transform:scale(1.2);opacity:1}}
+@keyframes babyPop{0%{opacity:0;transform:scale(.2) translateY(55px)}70%{opacity:1;transform:scale(1.12) translateY(-10px)}100%{opacity:1;transform:scale(1) translateY(0)}}
 </style>
 </head>
 <body>
@@ -38,7 +54,7 @@ h1{font-size:30px;margin:4px 0}.sub{color:#52717d;margin-bottom:16px}
 <span class="word" data-word="i">I</span>
 <span class="word" data-word="have">HAVE</span>
 <span class="word" data-word="a">A</span>
-<span class="word" data-word="shower">SHOWER</span>
+<span class="word" data-word="shower">SHOWER</span><span class="question">?</span>
 </div>
 
 <button class="mic" id="mic" aria-label="Start listening">🎤</button>
@@ -47,7 +63,7 @@ h1{font-size:30px;margin:4px 0}.sub{color:#52717d;margin-bottom:16px}
 </div>
 
 <div class="message" id="message">Can I have a shower?</div>
-<div class="animal" id="animal" aria-live="polite"></div>
+<div class="hatch" id="hatch" aria-live="polite"></div>
 <div class="transcript" id="transcript"></div>
 
 <div class="buttons">
@@ -67,7 +83,7 @@ const animals=[
 let recognition=null,listening=false,completed=false;
 
 const $=id=>document.getElementById(id);
-const mic=$("mic"),status=$("status"),message=$("message"),fill=$("fill"),transcript=$("transcript"),instruction=$("instruction"),animal=$("animal");
+const mic=$("mic"),status=$("status"),message=$("message"),fill=$("fill"),transcript=$("transcript"),instruction=$("instruction"),hatch=$("hatch");
 const spans=[...document.querySelectorAll(".word")];
 
 const aliases={
@@ -98,8 +114,10 @@ function findRecognised(text){
 
 function showAnimal(){
  const pick=animals[Math.floor(Math.random()*animals.length)];
- animal.innerHTML='<div>'+pick[0]+'</div><div class="animal-name">'+pick[1]+'</div>';
- animal.classList.add("show");
+ hatch.className="hatch show";
+ hatch.innerHTML='<div class="egg-stage"><div class="egg">🥚</div><div class="crack">〰<br>╱╲</div><div class="baby">'+pick[0]+'</div></div><div class="animal-name">'+pick[1]+'</div>';
+ setTimeout(()=>hatch.classList.add("cracking"),700);
+ setTimeout(()=>hatch.classList.add("revealed"),1450);
 }
 
 function update(text){
@@ -181,8 +199,8 @@ $("reset").addEventListener("click",()=>{
  if(recognition)try{recognition.stop()}catch(e){}
  speechSynthesis.cancel();
  listening=false;completed=false;mic.classList.remove("listening");
- animal.classList.remove("show");
- animal.innerHTML="";
+ hatch.className="hatch";
+ hatch.innerHTML="";
  spans.forEach(s=>s.classList.remove("heard","active"));
  fill.style.width="0%";transcript.textContent="";
  instruction.textContent="Ready?";status.textContent="Tap the microphone and say the whole sentence.";
