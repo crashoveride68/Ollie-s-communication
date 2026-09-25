@@ -218,7 +218,7 @@ function start(){
  listening=true;
  mic.classList.add("listening");
  instruction.textContent="🎤 Listening…";
- status.textContent="Say: Can I have a shower";
+ status.textContent="Say: "+levels[level].sentence;
  message.textContent="I'm listening!";
  transcript.textContent="";
 
@@ -260,8 +260,11 @@ $("reset").addEventListener("click",()=>{
  spans.forEach(s=>s.classList.remove("heard","active"));
  fill.style.width="0%";transcript.textContent="";
  instruction.textContent="Ready?";status.textContent="Tap the microphone and say the whole sentence.";
- message.textContent="Can I have a shower?";
+ target=levels[0].words; level=0; levelLabel.textContent=levels[0].name; rebuildWords();
 });
+
+levelLabel.textContent=levels[level].name;
+rebuildWords();
 
 })();
 </script>
