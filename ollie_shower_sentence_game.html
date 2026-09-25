@@ -1,0 +1,166 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Ollie's Shower Sentence Game</title>
+<style>
+*{box-sizing:border-box}body{margin:0;font-family:Arial,sans-serif;background:#dff6ff;color:#164e63}
+.game{max-width:780px;margin:auto;padding:18px;text-align:center}.box{background:#f8fdff;border:1px solid #b9e6f5;border-radius:26px;padding:18px}
+h1{font-size:30px;margin:4px 0}.sub{color:#52717d;margin-bottom:16px}
+.scene{background:linear-gradient(#67d3ff,#087db5);border-radius:22px;color:white;padding:22px}
+.instruction{font-size:20px;font-weight:800}.sentence{font-size:27px;font-weight:900;line-height:1.6;margin:18px auto;max-width:680px}
+.word{display:inline-block;margin:4px 5px;padding:7px 10px;border-radius:12px;background:#ffffff40}
+.word.heard{background:#bbf7d0;color:#166534}.word.missing{background:#fee2e2;color:#991b1b}.word.current{background:#fff;color:#075985}
+.mic{width:125px;height:125px;border:0;border-radius:50%;background:white;color:#075985;font-size:50px;cursor:pointer;box-shadow:0 5px 0 #075985}
+.mic.listening{background:#bbf7d0;animation:pulse 1s infinite}@keyframes pulse{50%{transform:scale(1.07)}}
+.status{font-weight:800;min-height:28px;margin-top:15px}.message{font-size:19px;font-weight:800;min-height:32px;margin:15px 0}
+.progress{height:12px;background:#ffffff66;border-radius:20px;overflow:hidden;margin-top:15px}.fill{height:100%;width:0;background:white;transition:.3s}
+.buttons{display:flex;justify-content:center;gap:10px;flex-wrap:wrap;margin-top:14px}.action{border:0;border-radius:14px;padding:13px 19px;font-weight:800;background:#164e63;color:white;cursor:pointer}.alt{background:white;color:#164e63;border:2px solid #cbd5e1}
+.result{font-size:16px;color:#52717d;min-height:24px;margin-top:8px}
+</style>
+</head>
+<body>
+<div class="game"><div class="box">
+<h1>🚿 Ollie's Shower Sentence Game</h1>
+<div class="sub">Say the whole sentence in one go!</div>
+
+<div class="scene">
+<div class="instruction" id="instruction">Get ready…</div>
+<div class="sentence" id="sentence"></div>
+<button class="mic" id="mic" aria-label="Listen to Ollie's sentence">🎤</button>
+<div class="status" id="status">Tap the microphone, then say the whole sentence.</div>
+<div class="progress"><div class="fill" id="fill"></div></div>
+</div>
+
+<div class="message" id="message">Can you say all the words?</div>
+<div class="result" id="result"></div>
+<div class="buttons">
+<button class="action" id="hear">🔊 Hear sentence</button>
+<button class="action alt" id="reset">↻ Try again</button>
+</div>
+</div></div>
+
+<script>
+(function(){
+const target=["can","i","have","a","shower","please","daddy"];
+let recognition=null,listening=false;
+
+const $=id=>document.getElementById(id);
+const sentence=$("sentence"),mic=$("mic"),status=$("status"),message=$("message"),result=$("result"),fill=$("fill"),instruction=$("instruction");
+
+function render(words=[],missing=[]){
+ sentence.innerHTML="";
+ target.forEach(w=>{
+   const s=document.createElement("span");
+   s.className="word";
+   if(words.includes(w))s.classList.add("heard");
+   else if(missing.includes(w))s.classList.add("missing");
+   s.textContent=w.toUpperCase();
+   sentence.appendChild(s);
+ });
+}
+
+function speak(text){
+ if(!("speechSynthesis"in window))return;
+ speechSynthesis.cancel();
+ const u=new SpeechSynthesisUtterance(text);
+ u.lang="en-AU";u.rate=.75;speechSynthesis.speak(u);
+}
+
+function normalise(text){
+ return text.toLowerCase().replace(/[^a-z\s']/g," ").replace(/\s+/g," ").trim();
+}
+
+function wordsFrom(text){
+ return normalise(text).split(" ").filter(Boolean);
+}
+
+function findWords(spoken){
+ const heard=wordsFrom(spoken);
+ const aliases={
+   "can":["can","ken"],"i":["i","eye","aye"],"have":["have","hav","av"],
+   "a":["a","uh","ay"],"shower":["shower","show","showa","shawa"],
+   "please":["please","pleas","pleez"],"daddy":["daddy","dadi","dad"]
+ };
+ const found=[];
+ target.forEach(t=>{
+   if(heard.some(h=>h===t || (aliases[t]||[]).includes(h) || h.includes(t)))found.push(t);
+ });
+ return [...new Set(found)];
+}
+
+function listen(){
+ const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+ if(!SR){
+   status.textContent="Speech recognition isn't supported here.";
+   message.textContent="Please open the file in Chrome.";
+   return;
+ }
+ if(listening)return;
+ recognition=new SR();
+ recognition.lang="en-AU";
+ recognition.continuous=false;
+ recognition.interimResults=false;
+ recognition.maxAlternatives=5;
+ listening=true;
+ mic.classList.add("listening");
+ instruction.textContent="🎤 Listening…";
+ status.textContent="Say the whole sentence now";
+ message.textContent="“Can I have a shower please daddy”";
+ result.textContent="";
+ fill.style.width="0%";
+
+ recognition.onresult=e=>{
+   let transcripts=[];
+   for(let i=0;i<e.results[0].length;i++)transcripts.push(e.results[0][i].transcript);
+   const heardText=transcripts.join(" ");
+   const found=findWords(heardText);
+   const missing=target.filter(w=>!found.includes(w));
+   render(found,missing);
+   fill.style.width=(found.length/target.length*100)+"%";
+   result.textContent="I heard: “"+heardText+"”";
+   if(missing.length===0){
+     instruction.textContent="🎉 Amazing!";
+     status.textContent="All the words were heard!";
+     message.textContent="🌟 CAN I HAVE A SHOWER PLEASE DADDY 🌟";
+     fill.style.width="100%";
+     speak("Can I have a shower please daddy");
+   }else{
+     instruction.textContent="Almost there!";
+     status.textContent="Try the sentence again";
+     message.textContent="Missing: "+missing.map(x=>x.toUpperCase()).join(", ");
+   }
+ };
+ recognition.onerror=e=>{
+   instruction.textContent="🎤 Try again";
+   if(e.error==="not-allowed"||e.error==="service-not-allowed")
+     message.textContent="Please allow microphone access.";
+   else message.textContent="I didn't catch that. Try saying the sentence again.";
+ };
+ recognition.onend=()=>{
+   listening=false;
+   mic.classList.remove("listening");
+   if(fill.style.width!=="100%")instruction.textContent="Ready?";
+ };
+ try{recognition.start()}catch(e){}
+}
+
+$("mic").addEventListener("click",listen);
+$("hear").addEventListener("click",()=>speak("Can I have a shower please daddy"));
+$("reset").addEventListener("click",()=>{
+ if(recognition)try{recognition.stop()}catch(e){}
+ speechSynthesis.cancel();
+ listening=false;mic.classList.remove("listening");
+ instruction.textContent="Ready?";
+ status.textContent="Tap the microphone, then say the whole sentence.";
+ message.textContent="Can you say all the words?";
+ result.textContent="";
+ fill.style.width="0%";
+ render();
+});
+render();
+})();
+</script>
+</body>
+</html>
