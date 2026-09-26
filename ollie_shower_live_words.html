@@ -203,6 +203,11 @@ function showAnimal(){
  setTimeout(()=>hatch.classList.add("revealed"),850);
 }
 
+function resetEgg(){
+  hatch.className="hatch show";
+  hatch.innerHTML='<div class="egg-stage"><div class="egg">🥚</div><div class="crack">〰<br>╱╲</div><div class="baby" id="baby"></div></div><div class="animal-name" id="animal-name">Your ocean animal is waiting!</div>';
+}
+
 function update(text){
  const found=findRecognised(text);
  spans.forEach((s,i)=>{
