@@ -208,42 +208,61 @@ function resetEgg(){
   hatch.innerHTML='<div class="egg-stage"><div class="egg">🥚</div><div class="crack">〰<br>╱╲</div><div class="baby" id="baby"></div></div><div class="animal-name" id="animal-name">Your ocean animal is waiting!</div>';
 }
 
-function update(text){
- const found=findRecognised(text);
- spans.forEach((s,i)=>{
-   s.classList.toggle("heard",found.includes(i));
-   s.classList.toggle("active",false);
- });
- fill.style.width=(found.length/target.length*100)+"%";
- transcript.textContent=text?"Heard: “"+text+"”":"";
+function goToNextLevel(){
+  if(level >= levels.length-1) return;
 
- if(found.length===target.length){
-   if(!completed){
-     completed=true;
-     instruction.textContent="🎉 Amazing!";
-     status.textContent="You said every word!";
-     message.textContent="🌟 "+levels[level].sentence+" 🌟";
-     showAnimal();
-     speak(levels[level].sentence);
-     if(level < levels.length-1){
-       setTimeout(()=>{
-         level++;
-         target=levels[level].words;
-         completed=false;
-         resetEgg();
-         levelLabel.textContent=levels[level].name;
-         rebuildWords();
-         instruction.textContent="Next level!";
-         message.textContent=levels[level].sentence;
-       },2600);
-     }
-   }
- }else{
-   const next=target.findIndex((w,i)=>!found.includes(i));
-   if(next>=0)spans[next].classList.add("active");
-   message.textContent="Keep going!";
- }
+  if(recognition){
+    try{ recognition.stop(); }catch(e){}
+  }
+  listening=false;
+  mic.classList.remove("listening");
+
+  level++;
+  target=levels[level].words;
+  completed=false;
+
+  // Fresh closed egg FIRST, so the previous reward cannot carry over.
+  resetEgg();
+  levelLabel.textContent=levels[level].name;
+  rebuildWords();
+  spans.forEach(s=>s.classList.remove("heard","active"));
+  fill.style.width="0%";
+  transcript.textContent="";
+  instruction.textContent="Next level!";
+  status.textContent="Tap the microphone and say the whole sentence.";
+  message.textContent=levels[level].sentence;
 }
+
+function update(text){
+  if(completed) return;
+
+  const found=findRecognised(text);
+  spans.forEach((s,i)=>{
+    s.classList.toggle("heard",found.includes(i));
+    s.classList.remove("active");
+  });
+
+  fill.style.width=(found.length/target.length*100)+"%";
+  // Transcript remains hidden visually.
+
+  if(found.length===target.length){
+    completed=true;
+    instruction.textContent="🎉 Amazing!";
+    status.textContent="You said every word!";
+    message.textContent="🌟 "+levels[level].sentence+" 🌟";
+    showAnimal();
+    speak(levels[level].sentence);
+
+    if(level < levels.length-1){
+      setTimeout(goToNextLevel, 2200);
+    }
+  }else{
+    const next=target.findIndex((w,i)=>!found.includes(i));
+    if(next>=0) spans[next].classList.add("active");
+    message.textContent="Keep going!";
+  }
+}
+
 
 function start(){
  const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
