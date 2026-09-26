@@ -1,0 +1,314 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Ollie's Fruit Words</title>
+<style>
+*{box-sizing:border-box}body{margin:0;font-family:Arial,sans-serif;background:#dff6ff;color:#164e63}
+.game{max-width:780px;margin:auto;padding:18px;text-align:center}.box{background:#f8fdff;border:1px solid #b9e6f5;border-radius:26px;padding:18px}
+h1{font-size:30px;margin:4px 0}.sub{color:#52717d;margin-bottom:16px}
+.scene{background:linear-gradient(#67d3ff,#087db5);border-radius:22px;color:white;padding:22px}
+.instruction{font-size:20px;font-weight:800}.sentence{font-size:29px;font-weight:900;line-height:1.7;margin:18px auto;max-width:700px}
+.word{display:inline-block;margin:4px 5px;padding:7px 11px;border-radius:13px;background:#ffffff40;transition:.18s}
+.word.heard{background:#bbf7d0;color:#166534;transform:scale(1.04)}
+.word.active{background:#fff;color:#075985;box-shadow:0 0 0 4px #ffffff55}
+.mic{width:125px;height:125px;border:0;border-radius:50%;background:white;color:#075985;font-size:50px;cursor:pointer;box-shadow:0 5px 0 #075985}
+.mic.listening{background:#bbf7d0;animation:pulse 1s infinite}@keyframes pulse{50%{transform:scale(1.07)}}
+.status{font-weight:800;min-height:28px;margin-top:15px}.message{font-size:19px;font-weight:800;min-height:32px;margin:15px 0}
+.progress{height:12px;background:#ffffff66;border-radius:20px;overflow:hidden;margin-top:15px}.fill{height:100%;width:0;background:white;transition:.15s}
+.buttons{display:flex;justify-content:center;gap:10px;flex-wrap:wrap;margin-top:14px}.action{border:0;border-radius:14px;padding:13px 19px;font-weight:800;background:#164e63;color:white;cursor:pointer}.alt{background:white;color:#164e63;border:2px solid #cbd5e1}
+.transcript{font-size:15px;color:#52717d;min-height:24px;margin-top:8px}
+.animal{min-height:0;font-size:76px;line-height:1;margin:4px 0;opacity:0;transform:scale(.4) translateY(15px);transition:.5s}
+.animal.show{opacity:1;transform:scale(1) translateY(0);animation:animalBounce 1.4s ease-in-out infinite}
+@keyframes animalBounce{0%,100%{transform:translateY(0) scale(1)}50%{transform:translateY(-10px) scale(1.04)}}
+.animal-name{font-size:22px;font-weight:900;margin-top:5px}
+.question{display:inline-block;margin-left:2px}
+.hatch{min-height:0;height:0;overflow:hidden;opacity:0;transition:.4s}
+.hatch.show{height:190px;opacity:1;margin-top:8px}
+.egg-stage{position:relative;height:180px;display:flex;align-items:center;justify-content:center}
+.egg{font-size:100px;line-height:1;display:block;filter:drop-shadow(0 5px 2px #07598555)}
+.hatch.show .egg{animation:eggWobble .55s ease-in-out 2}
+.crack{position:absolute;font-size:34px;font-weight:900;opacity:0;color:#164e63}
+.hatch.cracking .crack{opacity:1;animation:crackPop .55s ease-out forwards}
+.hatch.cracking .egg{animation:eggBreak .75s ease-out forwards}
+.hatch .baby{position:absolute;font-size:78px;opacity:0;transform:scale(.2) translateY(55px)}
+.hatch.revealed .egg{opacity:0}
+.hatch.revealed .baby{opacity:1;animation:babyPop .8s cubic-bezier(.2,.8,.2,1) forwards}
+@keyframes eggWobble{25%{transform:rotate(-7deg)}75%{transform:rotate(7deg)}}
+@keyframes eggBreak{0%{transform:scale(1)}45%{transform:scale(1.08) rotate(5deg)}100%{transform:scale(.3) rotate(-12deg);opacity:0}}
+@keyframes crackPop{0%{transform:scale(.5);opacity:0}100%{transform:scale(1.2);opacity:1}}
+@keyframes babyPop{0%{opacity:0;transform:scale(.2) translateY(55px)}70%{opacity:1;transform:scale(1.12) translateY(-10px)}100%{opacity:1;transform:scale(1) translateY(0)}}
+
+#ollie-level-game{width:100%}
+.level{font-size:clamp(13px,3.2vw,17px);font-weight:900;letter-spacing:1px;margin-bottom:2px}
+/* 100% portrait viewport layout */
+html,body{width:100%;height:100%;margin:0;padding:0;overflow:hidden}
+.level{font-size:clamp(13px,3.2vw,17px);font-weight:900;letter-spacing:1px;margin-bottom:2px}
+body{font-family:Arial,sans-serif;background:#dff6ff;color:#164e63}
+.game{width:100%;height:100%;max-width:none;margin:0;padding:0;display:flex;align-items:center;justify-content:center}
+.box{width:100%;height:100%;max-width:none;border:0;border-radius:0;padding:10px;display:flex;flex-direction:column;justify-content:space-between;overflow:hidden}
+h1{font-size:clamp(21px,5vw,30px);margin:2px 0}.sub{font-size:clamp(12px,3.2vw,16px);margin:0 0 5px}
+.scene{width:100%;padding:8px;border-radius:18px;flex:0 0 auto}
+.instruction{font-size:clamp(16px,4vw,20px)}.sentence{font-size:clamp(20px,6vw,30px);line-height:1.35;margin:5px auto}
+.word{margin:2px 3px;padding:4px 7px}.mic{width:clamp(76px,24vw,105px);height:clamp(76px,24vw,105px);font-size:clamp(34px,10vw,46px)}
+.status{font-size:clamp(13px,3.5vw,17px);min-height:20px;margin-top:5px}.progress{margin-top:6px;height:9px}
+.message{font-size:clamp(15px,4vw,19px);min-height:24px;margin:4px 0}
+.hatch.show{height:clamp(115px,25vh,155px);margin:0}.egg-stage{height:100%;min-height:0}.egg{font-size:clamp(62px,18vw,92px)}.hatch .baby{font-size:clamp(52px,15vw,78px)}.animal-name{font-size:clamp(15px,4vw,22px);margin-top:0}
+.transcript{font-size:clamp(11px,3vw,15px);min-height:18px;margin:2px 0}
+.buttons{gap:6px;margin-top:4px}.action{padding:9px 12px;font-size:clamp(12px,3.2vw,16px)}
+</style>
+</head>
+<body>
+<div class="game"><div class="box">
+<h1>🚿 Ollie's Shower Game</h1>
+<div class="sub">Say the sentence and watch the words light up!</div>
+
+<div class="scene">
+<div class="level" id="level">LEVEL 1</div>
+<div class="instruction" id="instruction">Ready?</div>
+
+<div class="sentence" id="sentence"></div>
+
+<button class="mic" id="mic" aria-label="Start listening">🎤</button>
+<div class="status" id="status">Tap the microphone and say the whole sentence.</div>
+<div class="progress"><div class="fill" id="fill"></div></div>
+</div>
+
+<div class="message" id="message">Can I have a fruit?</div>
+<div class="hatch show" id="hatch" aria-live="polite">
+      <div class="egg-stage">
+        <div class="egg">🥚</div><div class="crack">〰<br>╱╲</div><div class="baby" id="baby"></div>
+      </div>
+      <div class="animal-name" id="animal-name">Your fruit is waiting!</div>
+    </div>
+<div class="transcript" id="transcript"></div>
+
+<div class="buttons">
+<button class="action" id="hear">🔊 Hear sentence</button>
+<button class="action alt" id="reset">↻ Try again</button>
+</div>
+</div></div>
+
+<script>
+(function(){
+const levels=[
+    {name:"LEVEL 1", words:["apple"], sentence:"Apple!"},
+    {name:"LEVEL 2", words:["banana"], sentence:"Banana!"}
+  ];
+let level=0;
+let target=levels[level].words;
+const animals=[
+    ["🍎","Apple"],
+    ["🍌","Banana"],
+    ["🍓","Strawberry"],
+    ["🍊","Orange"],
+    ["🍉","Watermelon"],
+    ["🍇","Grapes"],
+    ["🍍","Pineapple"],
+    ["🥝","Kiwi"],
+    ["🥭","Mango"],
+    ["🍑","Peach"],
+    ["🍐","Pear"],
+    ["🍒","Cherries"]
+  ];
+let recognition=null,listening=false,completed=false;
+
+const $=id=>document.getElementById(id);
+const mic=$("mic"),status=$("status"),message=$("message"),fill=$("fill"),transcript=$("transcript"),instruction=$("instruction"),hatch=$("hatch"),levelLabel=$("level");
+let spans=[];
+function rebuildWords(){
+  const box=document.getElementById("sentence");
+  box.innerHTML="";
+  spans=[];
+  target.forEach((w,i)=>{
+    const s=document.createElement("span");
+    s.className="word";
+    s.dataset.word=w;
+    s.textContent=w.toUpperCase();
+    box.appendChild(s);
+    spans.push(s);
+  });
+  const q=document.createElement("span");
+  q.className="question";
+  q.textContent="?";
+  box.appendChild(q);
+  message.textContent=levels[level].sentence;
+}
+
+const aliases={
+      apple:["apple","aple"],
+      banana:["banana","bananna","nana"]
+    };
+
+function speak(text){
+ if(!("speechSynthesis"in window))return;
+ speechSynthesis.cancel();
+ const u=new SpeechSynthesisUtterance(text);
+ u.lang="en-AU";u.rate=.75;speechSynthesis.speak(u);
+}
+
+function clean(text){
+ return text.toLowerCase().replace(/[^a-z\s']/g," ").replace(/\s+/g," ").trim();
+}
+
+function findRecognised(text){
+ const heard=clean(text).split(" ").filter(Boolean);
+ const found=[];
+ target.forEach((word,index)=>{
+   if(heard.some(h=>h===word||(aliases[word]||[]).includes(h)||h.includes(word)))
+     found.push(index);
+ });
+ return [...new Set(found)];
+}
+
+
+let audioCtx=null;
+function getAudio(){
+ if(!audioCtx) audioCtx=new (window.AudioContext||window.webkitAudioContext)();
+ if(audioCtx.state==="suspended") audioCtx.resume();
+ return audioCtx;
+}
+function tone(freq,start,duration,type="sine",gain=.08){
+ const ctx=getAudio(),o=ctx.createOscillator(),g=ctx.createGain();
+ o.type=type;o.frequency.setValueAtTime(freq,start);
+ g.gain.setValueAtTime(.0001,start);
+ g.gain.exponentialRampToValueAtTime(gain,start+.015);
+ g.gain.exponentialRampToValueAtTime(.0001,start+duration);
+ o.connect(g);g.connect(ctx.destination);o.start(start);o.stop(start+duration+.03);
+}
+function crackSound(){
+ const ctx=getAudio(),now=ctx.currentTime;
+ // Three quick descending woody/cracking clicks.
+ tone(170,now,.10,"square",.07);
+ tone(105,now+.08,.13,"square",.06);
+ tone(70,now+.17,.16,"sawtooth",.045);
+}
+function rewardSound(){
+ const ctx=getAudio(),now=ctx.currentTime;
+ // Bright three-note reward jingle.
+ tone(523.25,now,.16,"sine",.09);
+ tone(659.25,now+.12,.16,"sine",.09);
+ tone(783.99,now+.24,.28,"sine",.10);
+}
+function showAnimal(){
+ const pick=animals[Math.floor(Math.random()*animals.length)];
+ document.getElementById("baby").textContent=pick[0];
+ document.getElementById("animal-name").textContent=pick[1];
+ hatch.className="hatch show";
+ setTimeout(()=>{hatch.classList.add("cracking"); crackSound();},100);
+ setTimeout(()=>{hatch.classList.add("revealed"); rewardSound();},850);
+}
+
+function resetEgg(){
+ hatch.className="hatch show";
+ hatch.innerHTML='<div class="egg-stage"><div class="egg">🥚</div><div class="crack">〰<br>╱╲</div><div class="baby" id="baby"></div></div><div class="animal-name" id="animal-name">Your fruit is waiting!</div>';
+}
+
+function update(text){
+ const found=findRecognised(text);
+ spans.forEach((s,i)=>{
+   s.classList.toggle("heard",found.includes(i));
+   s.classList.toggle("active",false);
+ });
+ fill.style.width=(found.length/target.length*100)+"%";
+ transcript.textContent=text?"Heard: “"+text+"”":"";
+
+ if(found.length===target.length){
+   if(!completed){
+     completed=true;
+     instruction.textContent="🎉 Amazing!";
+     status.textContent="You said every word!";
+     message.textContent="🌟 "+levels[level].sentence+" 🌟";
+     showAnimal();
+     speak(levels[level].sentence);
+     if(level < levels.length-1){
+       setTimeout(()=>{
+         level++;
+         target=levels[level].words;
+         completed=false;
+         levelLabel.textContent=levels[level].name;
+         rebuildWords();
+         resetEgg();
+         instruction.textContent="Next level!";
+         status.textContent="Tap the microphone and say the sentence.";
+         message.textContent=levels[level].sentence;
+       },2600);
+     }
+   }
+ }else{
+   const next=target.findIndex((w,i)=>!found.includes(i));
+   if(next>=0)spans[next].classList.add("active");
+   message.textContent="Keep going!";
+ }
+}
+
+function start(){
+ const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+ if(!SR){
+   status.textContent="Speech recognition isn't supported here.";
+   message.textContent="Please open the file in Chrome.";
+   return;
+ }
+ if(listening)return;
+ completed=false;
+ recognition=new SR();
+ recognition.lang="en-AU";
+ recognition.continuous=true;
+ recognition.interimResults=true;
+ recognition.maxAlternatives=3;
+ listening=true;
+ mic.classList.add("listening");
+ instruction.textContent="🎤 Listening…";
+ status.textContent="Say: "+levels[level].sentence;
+ message.textContent="I'm listening!";
+ transcript.textContent="";
+
+ recognition.onresult=e=>{
+   let text="";
+   for(let i=0;i<e.results.length;i++){
+     text+=" "+e.results[i][0].transcript;
+   }
+   update(text.trim());
+ };
+
+ recognition.onerror=e=>{
+   if(e.error==="not-allowed"||e.error==="service-not-allowed"){
+     message.textContent="Please allow microphone access.";
+   }else{
+     message.textContent="I couldn't hear that clearly. Keep going.";
+   }
+ };
+
+ recognition.onend=()=>{
+   listening=false;
+   mic.classList.remove("listening");
+   if(!completed){
+     instruction.textContent="Ready?";
+     status.textContent="Tap 🎤 to try again";
+   }
+ };
+ try{recognition.start()}catch(e){}
+}
+
+mic.addEventListener("click",start);
+$("hear").addEventListener("click",()=>speak("Can I have a fruit"));
+$("reset").addEventListener("click",()=>{
+ if(recognition)try{recognition.stop()}catch(e){}
+ speechSynthesis.cancel();
+ listening=false;completed=false;mic.classList.remove("listening");
+ hatch.className="hatch show";
+ hatch.innerHTML='<div class="egg-stage"><div class="egg">🥚</div><div class="crack">〰<br>╱╲</div><div class="baby" id="baby"></div></div><div class="animal-name" id="animal-name">Your fruit is waiting!</div>';
+ spans.forEach(s=>s.classList.remove("heard","active"));
+ fill.style.width="0%";transcript.textContent="";
+ instruction.textContent="Ready?";status.textContent="Tap the microphone and say the whole sentence.";
+ target=levels[0].words; level=0; levelLabel.textContent=levels[0].name; rebuildWords();
+});
+
+levelLabel.textContent=levels[level].name;
+rebuildWords();
+
+})();
+</script>
+</body>
+</html>
