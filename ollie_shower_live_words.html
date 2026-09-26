@@ -153,13 +153,47 @@ function findRecognised(text){
  return [...new Set(found)];
 }
 
+
+let audioCtx=null;
+function getAudio(){
+ if(!audioCtx) audioCtx=new (window.AudioContext||window.webkitAudioContext)();
+ if(audioCtx.state==="suspended") audioCtx.resume();
+ return audioCtx;
+}
+function tone(freq,start,duration,type="sine",gain=.08){
+ const ctx=getAudio(),o=ctx.createOscillator(),g=ctx.createGain();
+ o.type=type;o.frequency.setValueAtTime(freq,start);
+ g.gain.setValueAtTime(.0001,start);
+ g.gain.exponentialRampToValueAtTime(gain,start+.015);
+ g.gain.exponentialRampToValueAtTime(.0001,start+duration);
+ o.connect(g);g.connect(ctx.destination);o.start(start);o.stop(start+duration+.03);
+}
+function crackSound(){
+ const ctx=getAudio(),now=ctx.currentTime;
+ // Three quick descending woody/cracking clicks.
+ tone(170,now,.10,"square",.07);
+ tone(105,now+.08,.13,"square",.06);
+ tone(70,now+.17,.16,"sawtooth",.045);
+}
+function rewardSound(){
+ const ctx=getAudio(),now=ctx.currentTime;
+ // Bright three-note reward jingle.
+ tone(523.25,now,.16,"sine",.09);
+ tone(659.25,now+.12,.16,"sine",.09);
+ tone(783.99,now+.24,.28,"sine",.10);
+}
 function showAnimal(){
  const pick=animals[Math.floor(Math.random()*animals.length)];
  document.getElementById("baby").textContent=pick[0];
  document.getElementById("animal-name").textContent=pick[1];
  hatch.className="hatch show";
- setTimeout(()=>hatch.classList.add("cracking"),100);
- setTimeout(()=>hatch.classList.add("revealed"),850);
+ setTimeout(()=>{hatch.classList.add("cracking"); crackSound();},100);
+ setTimeout(()=>{hatch.classList.add("revealed"); rewardSound();},850);
+}
+
+function resetEgg(){
+ hatch.className="hatch show";
+ hatch.innerHTML='<div class="egg-stage"><div class="egg">🥚</div><div class="crack">〰<br>╱╲</div><div class="baby" id="baby"></div></div><div class="animal-name" id="animal-name">Your ocean animal is waiting!</div>';
 }
 
 function update(text){
@@ -188,6 +222,7 @@ function update(text){
          rebuildWords();
          resetEgg();
          instruction.textContent="Next level!";
+         status.textContent="Tap the microphone and say the sentence.";
          message.textContent=levels[level].sentence;
        },2600);
      }
