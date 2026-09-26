@@ -138,12 +138,17 @@ button {
 (function(){
 const levels=[
     {name:"LEVEL 1", words:["i","want"], sentence:"I want"},
-    {name:"LEVEL 2", words:["i","want","a","banana"], sentence:"I want a banana"}
+    {name:"LEVEL 2", words:["i","want","a","banana"], sentence:"I want a banana"},
+    {name:"LEVEL 3", words:["i","want","an","apple"], sentence:"I want an apple"},
+    {name:"LEVEL 4", words:["i","want","a","strawberry"], sentence:"I want a strawberry"}
   ];
 let level=0;
+let completed=false;
 let target=levels[level].words;
 const animals=[
-    ["🍌","Banana"]
+    ["🍌","Banana"],
+    ["🍎","Apple"],
+    ["🍓","Strawberry"]
   ];
 let recognition=null,listening=false,completed=false;
 
@@ -173,7 +178,10 @@ const aliases={
       i:["i","eye","aye"],
       want:["want","won"],
       a:["a","uh","ay"],
-      banana:["banana","bananna","nana"]
+      an:["an","un"],
+      banana:["banana","bananna","nana"],
+      apple:["apple","aple"],
+      strawberry:["strawberry","strawbry","straw berry"]
     };
 
 function speak(text){
@@ -227,12 +235,22 @@ function rewardSound(){
  tone(783.99,now+.24,.28,"sine",.10);
 }
 function showAnimal(){
- const pick=animals[Math.floor(Math.random()*animals.length)];
- document.getElementById("baby").textContent=pick[0];
- document.getElementById("animal-name").textContent=pick[1];
- hatch.className="hatch show";
- setTimeout(()=>{hatch.classList.add("cracking"); crackSound();},100);
- setTimeout(()=>{hatch.classList.add("revealed"); rewardSound();},850);
+  const rewardIndex = Math.min(Math.max(level - 1, 0), animals.length - 1);
+  const [emoji,name] = animals[rewardIndex];
+  const baby = document.getElementById("baby");
+  const nameEl = document.getElementById("animal-name");
+  const stage = document.querySelector(".egg-stage");
+  if(!baby || !nameEl || !stage) return;
+
+  baby.textContent = emoji;
+  nameEl.textContent = name + "!";
+  stage.classList.remove("revealed","cracking");
+  crackSound();
+  setTimeout(()=>stage.classList.add("cracking"),100);
+  setTimeout(()=>{
+    stage.classList.add("revealed");
+    rewardSound();
+  },850);
 }
 
 function resetEgg(){
@@ -249,25 +267,24 @@ function update(text){
  fill.style.width=(found.length/target.length*100)+"%";
  transcript.textContent=text?"Heard: “"+text+"”":"";
 
- if(found.length===target.length){
-   if(!completed){
-     completed=true;
-     instruction.textContent="🎉 Amazing!";
-     status.textContent="You said every word!";
-     message.textContent="🌟 "+levels[level].sentence+" 🌟";
-     showAnimal();
-     speak(levels[level].sentence);
-     if(level < levels.length-1){
-       setTimeout(()=>{
-         level++;
-         target=levels[level].words;
-         completed=false;
-         levelLabel.textContent=levels[level].name;
-         rebuildWords();
-         resetEgg();
-         instruction.textContent="Next level!";
-         status.textContent="Tap the microphone and say the sentence.";
-         message.textContent=levels[level].sentence;
+ if(found.length === target.length && !completed){
+      completed = true;
+      message.textContent = "🌟 " + levels[level].sentence + " 🌟";
+      showAnimal();
+      speak(levels[level].sentence);
+
+      if(level < levels.length - 1){
+        setTimeout(()=>{
+          level++;
+          target = levels[level].words;
+          rebuildWords();
+          resetEgg();
+          updateUI();
+          completed = false;
+          message.textContent = "Listen and say the whole sentence";
+        },2600);
+      }
+    }
        },2600);
      }
    }
