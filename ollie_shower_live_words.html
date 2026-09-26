@@ -225,9 +225,9 @@ function update(text){
          level++;
          target=levels[level].words;
          completed=false;
+         resetEgg();
          levelLabel.textContent=levels[level].name;
          rebuildWords();
-         resetEgg();
          instruction.textContent="Next level!";
          message.textContent=levels[level].sentence;
        },2600);
