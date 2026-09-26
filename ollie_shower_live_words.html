@@ -177,21 +177,19 @@ function update(text){
      instruction.textContent="🎉 Amazing!";
      status.textContent="You said every word!";
      message.textContent="🌟 "+levels[level].sentence+" 🌟";
+     showAnimal();
+     speak(levels[level].sentence);
      if(level < levels.length-1){
        setTimeout(()=>{
          level++;
          target=levels[level].words;
          completed=false;
          levelLabel.textContent=levels[level].name;
-         spans.length && spans.forEach(s=>s.remove());
          rebuildWords();
          resetEgg();
          instruction.textContent="Next level!";
-         message.textContent="Now say: "+levels[level].sentence;
-       },1400);
-     }else{
-       showAnimal();
-       speak(levels[level].sentence);
+         message.textContent=levels[level].sentence;
+       },2600);
      }
    }
  }else{
