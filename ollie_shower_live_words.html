@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Ollie's Shower Game</title>
 <style>
 *{box-sizing:border-box}body{margin:0;font-family:Arial,sans-serif;background:#dff6ff;color:#164e63}
@@ -57,8 +57,48 @@ h1{font-size:clamp(21px,5vw,30px);margin:2px 0}.sub{font-size:clamp(12px,3.2vw,1
 .hatch.show{height:clamp(115px,25vh,155px);margin:0}.egg-stage{height:100%;min-height:0}.egg{font-size:clamp(62px,18vw,92px)}.hatch .baby{font-size:clamp(52px,15vw,78px)}.animal-name{font-size:clamp(15px,4vw,22px);margin-top:0}
 .transcript{font-size:clamp(11px,3vw,15px);min-height:18px;margin:2px 0}
 .buttons{gap:6px;margin-top:4px}.action{padding:9px 12px;font-size:clamp(12px,3.2vw,16px)}
-body { user-select:none; -webkit-user-select:none; touch-action:manipulation; }
 </style>
+
+<style id="shower-target-and-buttons">
+.word {
+  font-size: clamp(2.6rem, 9vw, 5rem) !important;
+  font-weight: 900 !important;
+  padding: 8px 14px !important;
+  margin: 4px 6px !important;
+}
+.buttons .action {
+  min-height: 58px !important;
+  padding: 14px 22px !important;
+  font-size: clamp(1rem, 4vw, 1.35rem) !important;
+  border-radius: 18px !important;
+  font-weight: 800 !important;
+}
+</style>
+
+
+<style id="big-shower-egg">
+.hatch.show {
+  height: clamp(150px, 32vh, 220px) !important;
+}
+.egg {
+  font-size: clamp(85px, 24vw, 135px) !important;
+}
+.hatch .baby {
+  font-size: clamp(75px, 21vw, 115px) !important;
+}
+.animal-name {
+  font-size: clamp(18px, 5vw, 28px) !important;
+  font-weight: 900 !important;
+}
+</style>
+
+
+<style id="hide-live-transcript">
+#transcript {
+  display: none !important;
+}
+</style>
+
 </head>
 <body>
 <div class="game"><div class="box">
@@ -154,47 +194,13 @@ function findRecognised(text){
  return [...new Set(found)];
 }
 
-
-let audioCtx=null;
-function getAudio(){
- if(!audioCtx) audioCtx=new (window.AudioContext||window.webkitAudioContext)();
- if(audioCtx.state==="suspended") audioCtx.resume();
- return audioCtx;
-}
-function tone(freq,start,duration,type="sine",gain=.08){
- const ctx=getAudio(),o=ctx.createOscillator(),g=ctx.createGain();
- o.type=type;o.frequency.setValueAtTime(freq,start);
- g.gain.setValueAtTime(.0001,start);
- g.gain.exponentialRampToValueAtTime(gain,start+.015);
- g.gain.exponentialRampToValueAtTime(.0001,start+duration);
- o.connect(g);g.connect(ctx.destination);o.start(start);o.stop(start+duration+.03);
-}
-function crackSound(){
- const ctx=getAudio(),now=ctx.currentTime;
- // Three quick descending woody/cracking clicks.
- tone(170,now,.10,"square",.07);
- tone(105,now+.08,.13,"square",.06);
- tone(70,now+.17,.16,"sawtooth",.045);
-}
-function rewardSound(){
- const ctx=getAudio(),now=ctx.currentTime;
- // Bright three-note reward jingle.
- tone(523.25,now,.16,"sine",.09);
- tone(659.25,now+.12,.16,"sine",.09);
- tone(783.99,now+.24,.28,"sine",.10);
-}
 function showAnimal(){
  const pick=animals[Math.floor(Math.random()*animals.length)];
  document.getElementById("baby").textContent=pick[0];
  document.getElementById("animal-name").textContent=pick[1];
  hatch.className="hatch show";
- setTimeout(()=>{hatch.classList.add("cracking"); crackSound();},100);
- setTimeout(()=>{hatch.classList.add("revealed"); rewardSound();},850);
-}
-
-function resetEgg(){
- hatch.className="hatch show";
- hatch.innerHTML='<div class="egg-stage"><div class="egg">🥚</div><div class="crack">〰<br>╱╲</div><div class="baby" id="baby"></div></div><div class="animal-name" id="animal-name">Your ocean animal is waiting!</div>';
+ setTimeout(()=>hatch.classList.add("cracking"),100);
+ setTimeout(()=>hatch.classList.add("revealed"),850);
 }
 
 function update(text){
@@ -223,7 +229,6 @@ function update(text){
          rebuildWords();
          resetEgg();
          instruction.textContent="Next level!";
-         status.textContent="Tap the microphone and say the sentence.";
          message.textContent=levels[level].sentence;
        },2600);
      }
